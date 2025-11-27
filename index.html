@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>黎梨的世界</title> <!-- 自定義 App 名稱 -->
+    <title>控制台 (SETTINGS) - 黎梨的世界</title>
     
-    <!-- App Icon -->
-    <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='100' fill='%231a1b26'/%3E%3Ctext x='50%25' y='50%25' font-family='sans-serif' font-weight='bold' font-size='280' fill='%23ff9e64' text-anchor='middle' dy='.35em'%3E控%3C/text%3E%3C/svg%3E">
-    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='100' fill='%231a1b26'/%3E%3Ctext x='50%25' y='50%25' font-family='sans-serif' font-weight='bold' font-size='280' fill='%23ff9e64' text-anchor='middle' dy='.35em'%3E控%3C/text%3E%3C/svg%3E">
+    <!-- V30 新增：自定義 App 圖標 (Base64 SVG) -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2220%22 fill=%22%231a1b26%22/><text x=%2250%22 y=%2250%22 font-family=%22sans-serif%22 font-weight=%22bold%22 font-size=%2250%22 fill=%22%23ff9e64%22 text-anchor=%22middle%22 dy=%22.35em%22>控</text></svg>">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 fill=%22%231a1b26%22/><text x=%2250%22 y=%2250%22 font-family=%22sans-serif%22 font-weight=%22bold%22 font-size=%2250%22 fill=%22%23ff9e64%22 text-anchor=%22middle%22 dy=%22.35em%22>控</text></svg>">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
@@ -52,10 +52,7 @@
 </head>
 <body class="h-screen flex flex-col w-full text-sm relative">
 
-    <!-- V31: 增加 playsinline 属性，兼容 iOS 视频音源 -->
-    <audio id="startup-audio" preload="auto" playsinline></audio>
-    <!-- 备用 video 标签，用于某些视频格式 -->
-    <video id="startup-video" preload="auto" playsinline style="display:none;"></video>
+    <audio id="startup-audio" preload="auto"></audio>
 
     <!-- VIEW 0: COVER -->
     <div id="view-cover">
@@ -73,7 +70,7 @@
             <div class="grid grid-cols-3 gap-6"><div class="key-btn" onclick="App.inputPin(1)">1</div><div class="key-btn" onclick="App.inputPin(2)">2</div><div class="key-btn" onclick="App.inputPin(3)">3</div><div class="key-btn" onclick="App.inputPin(4)">4</div><div class="key-btn" onclick="App.inputPin(5)">5</div><div class="key-btn" onclick="App.inputPin(6)">6</div><div class="key-btn" onclick="App.inputPin(7)">7</div><div class="key-btn" onclick="App.inputPin(8)">8</div><div class="key-btn" onclick="App.inputPin(9)">9</div><div class="key-btn opacity-0 cursor-default"></div><div class="key-btn" onclick="App.inputPin(0)">0</div><div class="key-btn text-sm" onclick="App.clearPin()"><i class="fa-solid fa-delete-left"></i></div></div>
             <button onclick="App.cancelPin()" class="mt-8 text-white/60 text-xs tracking-widest hover:text-white">CANCEL</button>
         </div>
-        <div class="absolute bottom-8 text-[10px] text-gray-500 tracking-widest font-serif opacity-50">SYSTEM V31.0 READY</div>
+        <div class="absolute bottom-8 text-[10px] text-gray-500 tracking-widest font-serif opacity-50">SYSTEM V30.0 READY</div>
     </div>
 
     <div id="app-background"></div>
@@ -175,77 +172,78 @@
                 lines.forEach((line) => { const div = document.createElement('div'); div.className = 'title-line'; div.innerText = line; container.appendChild(div); });
             },
 
-            // V31 核心修复：音效预加载与保险机制
-            async loadAudioSettings() { 
-                const a = document.getElementById('startup-audio'); 
-                const v = document.getElementById('startup-video');
-                const d = await AssetDB.get('custom_audio'); 
-                // 极短的 Beep 声，避免文件过大
-                const def = "data:audio/wav;base64,UklGRl9vT1BXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YU"; 
-
-                if (d) { 
-                    const url = URL.createObjectURL(d);
-                    // 智能判断是视频还是音频
-                    if (d.type.startsWith('video/')) {
-                        v.src = url;
-                        v.load(); // 预加载视频
-                        a.src = ""; // 清空音频标签
-                    } else {
-                        a.src = url; 
-                        a.load(); // 预加载音频
-                        v.src = "";
+            // V29 核心修复：新建逻辑闭环
+            createNewAdventure(t = "新冒险") {
+                const newId = Date.now().toString() + Math.floor(Math.random() * 1000).toString(); // V29: 增加随机数防止ID冲突
+                const n = { id: newId, title: t, charName: "", charDesc: "", firstMes: "你好，旅行者。", worldScenario: "", userPersona: "", jailbreak: "", charAvatar: "", userAvatar: "", chatHistory: [] };
+                this.data.push(n);
+                this.saveToLocal();
+                
+                // 核心修复：强制指针跳转与视图刷新
+                this.currentId = newId;
+                
+                // 1. 刷新列表（确保 UI 上有这个新项目）
+                this.renderAdventureList();
+                
+                // 2. 强制加载数据到设定页表单
+                this.loadAdventure(newId);
+                
+                // 3. 强制切换到 Dashboard 视图 (处理 SPA 逻辑)
+                this.enterDashboard();
+                
+                // 4. 切换到 Settings Tab
+                this.switchTab('settings');
+                
+                // 5. 聚焦输入框
+                setTimeout(() => {
+                    const titleInput = document.getElementById('input-title');
+                    if (titleInput) {
+                        titleInput.focus();
+                        titleInput.select();
                     }
-                } else { 
-                    a.src = "https://assets.mixkit.co/active_storage/sfx/2578/2578-preview.mp3"; 
-                    a.load();
-                } 
+                }, 200);
+                
+                this.showToast("新篇章已開啟");
             },
 
-            handleAudioUpload(i) { 
-                const f = i.files[0]; if(!f) return; 
-                const r = new FileReader(); 
-                r.onload = async (e) => { 
-                    const b = new Blob([e.target.result], { type: f.type }); 
-                    await AssetDB.save('custom_audio', b); 
-                    this.loadAudioSettings(); 
-                    this.showToast("音效已更新，请点击指纹测试"); 
-                }; 
-                r.readAsArrayBuffer(f); i.value = ''; 
-            },
-
-            async clearAudio() { await AssetDB.delete('custom_audio'); this.loadAudioSettings(); this.showToast("已恢复"); },
-
-            // V31 修复：双重保险播放逻辑
-            playStartupSound() { 
-                const a = document.getElementById('startup-audio'); 
-                const v = document.getElementById('startup-video');
-                
-                const playPromise = (a.src) ? a.play() : v.play();
-                
-                if (playPromise !== undefined) {
-                    playPromise.then(_ => {
-                        // Autoplay started!
-                    }).catch(error => {
-                        console.log("Autoplay prevented, but unlocking anyway.");
-                        // 即使播放失败，也不要阻挡用户进入
-                    });
+            updateData(key, value) {
+                if (!this.currentId) return;
+                const adv = this.data.find(a => a.id === this.currentId);
+                if (adv) {
+                    adv[key] = value;
+                    this.saveToLocal();
+                    // 实时刷新列表，确保标题同步
+                    if (key === 'title') { 
+                        this.renderAdventureList(); 
+                        this.updateChatHeader(); 
+                    }
+                    if (['charName', 'charAvatar'].includes(key)) this.updateChatHeader();
                 }
             },
-
-            tryUnlock() { const s = JSON.parse(localStorage.getItem('roleplay_api_settings')) || {}; if (s.passcode && s.passcode.length === 4) { document.getElementById('keypad-overlay').classList.add('active'); this.currentPin = ""; this.updatePinDots(); } else { this.performUnlock(); } },
             
-            performUnlock() { 
-                this.playStartupSound(); // 触发播放
-                this.animateScan(); // 同时执行动画
+            // V29: 确保点击列表也能正确跳转
+            enterChat(id) {
+                this.currentId = id; // 确保指针更新
+                this.loadAdventure(id);
+                document.getElementById('view-dashboard').classList.add('view-hidden');
+                document.getElementById('view-chat').classList.remove('view-hidden');
+                const c = document.getElementById('chat-container'); 
+                setTimeout(() => c.scrollTop = c.scrollHeight, 50);
             },
 
-            // ... (其他所有 V30 逻辑保持不变) ...
+            // --- 其他逻辑 (V28以前) ---
+            async loadAudioSettings() { const a = document.getElementById('startup-audio'); const d = await AssetDB.get('custom_audio'); if (d) { a.src = URL.createObjectURL(d); } else { a.src = "data:audio/wav;base64,UklGRl9vT1BXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YU"; } },
+            handleAudioUpload(i) { const f = i.files[0]; if(!f) return; const r = new FileReader(); r.onload = async (e) => { const b = new Blob([e.target.result], { type: f.type }); await AssetDB.save('custom_audio', b); this.loadAudioSettings(); this.showToast("音效已更换"); setTimeout(()=>document.getElementById('startup-audio').play(), 500); }; r.readAsArrayBuffer(f); i.value = ''; },
+            async clearAudio() { await AssetDB.delete('custom_audio'); this.loadAudioSettings(); this.showToast("已恢复"); },
             async loadBackground() { const b = await AssetDB.get('bg_image'); const el = document.getElementById('app-background'); if (b) { el.style.backgroundImage = `url(${URL.createObjectURL(b)})`; el.style.opacity = '0.4'; } else { el.style.backgroundImage = 'none'; el.style.opacity = '0'; } },
             handleBgUpload(i) { const f = i.files[0]; if(!f) return; const r = new FileReader(); r.onload = async (e) => { const b = new Blob([e.target.result], {type: f.type}); await AssetDB.save('bg_image', b); this.loadBackground(); this.showToast("背景已设"); }; r.readAsArrayBuffer(f); i.value = ''; },
             async clearBackground() { await AssetDB.delete('bg_image'); this.loadBackground(); this.showToast("背景已删"); },
             async loadCoverSettings() { const s = JSON.parse(localStorage.getItem('roleplay_api_settings')) || {}; this.renderAestheticTitle(s.welcomeText); document.getElementById('input-welcome-text').value = s.welcomeText || ""; document.getElementById('input-passcode').value = s.passcode || ""; const b = await AssetDB.get('cover_image'); if (b) document.getElementById('view-cover').style.backgroundImage = `url(${URL.createObjectURL(b)})`; },
             handleCoverUpload(i) { const f = i.files[0]; if(!f) return; const r = new FileReader(); r.onload = async (e) => { const b = new Blob([e.target.result], {type: f.type}); await AssetDB.save('cover_image', b); this.loadCoverSettings(); this.showToast("封面已换"); }; r.readAsArrayBuffer(f); i.value = ''; },
             async clearCover() { await AssetDB.delete('cover_image'); document.getElementById('view-cover').style.backgroundImage = "url('https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=2072&auto=format&fit=crop')"; this.showToast("封面重置"); },
+            playStartupSound() { const a = document.getElementById('startup-audio'); a.volume=0.6; a.play().catch(()=>{}); },
+            tryUnlock() { const s = JSON.parse(localStorage.getItem('roleplay_api_settings')) || {}; if (s.passcode && s.passcode.length === 4) { document.getElementById('keypad-overlay').classList.add('active'); this.currentPin = ""; this.updatePinDots(); } else { this.performUnlock(); } },
+            performUnlock() { this.playStartupSound(); this.animateScan(); },
             inputPin(n) { if (this.currentPin.length < 4) { this.currentPin += n; this.updatePinDots(); if (this.currentPin.length === 4) setTimeout(() => this.checkPin(), 200); } },
             clearPin() { this.currentPin = this.currentPin.slice(0, -1); this.updatePinDots(); },
             cancelPin() { document.getElementById('keypad-overlay').classList.remove('active'); this.currentPin = ""; this.updatePinDots(); },
@@ -254,14 +252,13 @@
             animateScan() { document.getElementById('scan-line').style.display = 'block'; document.getElementById('login-text').innerText = "Verifying..."; document.getElementById('login-text').classList.add('text-[#7aa2f7]', 'animate-pulse'); setTimeout(() => { document.getElementById('login-text').innerText = "Granted"; document.getElementById('login-text').classList.replace('text-[#7aa2f7]', 'text-green-400'); setTimeout(() => { document.getElementById('view-cover').classList.add('cover-hidden'); document.getElementById('view-dashboard').classList.remove('view-hidden'); }, 500); }, 1200); },
             updateCharCount(t) { document.getElementById('char-count').innerText = t.value.length + ' chars'; },
             enterDashboard() { document.getElementById('view-chat').classList.add('view-hidden'); document.getElementById('view-dashboard').classList.remove('view-hidden'); this.switchTab('adventure'); },
-            enterChat(id) { this.loadAdventure(id); document.getElementById('view-dashboard').classList.add('view-hidden'); document.getElementById('view-chat').classList.remove('view-hidden'); const c = document.getElementById('chat-container'); setTimeout(() => c.scrollTop = c.scrollHeight, 50); },
             saveToLocal() { localStorage.setItem('roleplay_saves_v2', JSON.stringify(this.data)); },
             loadSystemSettings() { const s = JSON.parse(localStorage.getItem('roleplay_api_settings')) || { url: '', key: '', model: '' }; document.getElementById('input-api-url').value = s.url || ''; document.getElementById('input-api-key').value = s.key || ''; if(s.model) { const sel = document.getElementById('select-model'); sel.innerHTML = `<option value="${s.model}">${s.model}</option>`; sel.value = s.model; } this.loadCoverSettings(); },
             saveSystemSettings() { const url = document.getElementById('input-api-url').value; const key = document.getElementById('input-api-key').value; const model = document.getElementById('select-model').value; const welcomeText = document.getElementById('input-welcome-text').value; const passcode = document.getElementById('input-passcode').value; const old = JSON.parse(localStorage.getItem('roleplay_api_settings')) || {}; const newS = { ...old, url, key, model, welcomeText, passcode }; localStorage.setItem('roleplay_api_settings', JSON.stringify(newS)); this.renderAestheticTitle(welcomeText); },
             async fetchModels() { let url = document.getElementById('input-api-url').value.replace(/\/$/, ''); const key = document.getElementById('input-api-key').value; const select = document.getElementById('select-model'); if (!url) return alert("请先填写 API 地址"); select.innerHTML = '<option>连接中...</option>'; const fallback = ["gemini-1.5-flash", "gemini-1.5-pro", "gemini-1.5-flash-8b", "gemini-1.0-pro"]; try { let fUrl = "", h = {}; if (url.includes('googleapis.com')) { if (!url.includes('v1beta')) url += '/v1beta'; fUrl = `${url}/models?key=${key}`; } else { fUrl = `${url}/models`; h = { 'Authorization': `Bearer ${key}` }; } const res = await fetch(fUrl, { method: 'GET', headers: h }); if (!res.ok) throw new Error("Err"); const data = await res.json(); const models = data.models || data.data || []; select.innerHTML = ''; if (models.length === 0) { select.innerHTML = '<option value="">未找到</option>'; return; } models.forEach(m => { let id = m.name || m.id; if (id.startsWith('models/')) id = id.replace('models/', ''); const opt = document.createElement('option'); opt.value = id; opt.text = id; select.appendChild(opt); }); this.showToast(`已获取 ${models.length} 个模型`); } catch (err) { if (url.includes('googleapis')) { select.innerHTML = ''; fallback.forEach(m => { const opt = document.createElement('option'); opt.value = m; opt.text = m; select.appendChild(opt); }); this.showToast("已加载内置 Gemini 列表"); select.value = fallback[0]; this.saveSystemSettings(); } else { select.innerHTML = '<option value="">获取失败</option>'; const manual = prompt("连接失败，请输入模型：", "gpt-3.5-turbo"); if(manual) { select.innerHTML = `<option value="${manual}">${manual}</option>`; this.saveSystemSettings(); } } } },
             handleRawPresetUpload(i) { const f = i.files; if (!f || f.length === 0) return; let txt = ""; let cnt = 0; Array.from(f).forEach(file => { const r = new FileReader(); r.onload = (e) => { txt += `\n\n--- File: ${file.name} ---\n${e.target.result}`; c++; if (c === f.length) { const j = document.getElementById('input-jailbreak'); j.value += txt; this.updateData('jailbreak', j.value); this.showToast(`已追加 ${f.length} 个文件`); i.value = ''; } }; r.readAsText(file); }); },
-            createNewAdventure(t = "新冒险") { const n = { id: Date.now().toString() + Math.floor(Math.random() * 1000).toString(), title: t, charName: "", charDesc: "", firstMes: "你好，旅行者。", worldScenario: "", userPersona: "", jailbreak: "", charAvatar: "", userAvatar: "", chatHistory: [] }; this.data.push(n); this.saveToLocal(); this.currentId = n.id; this.renderAdventureList(); this.loadAdventure(n.id); this.enterDashboard(); this.switchTab('settings'); setTimeout(() => { const titleInput = document.getElementById('input-title'); if (titleInput) { titleInput.focus(); titleInput.select(); } }, 200); this.showToast("新篇章已開啟"); },
-            updateData(key, value) { if (!this.currentId) return; const adv = this.data.find(a => a.id === this.currentId); if (adv) { adv[key] = value; this.saveToLocal(); if (key === 'title') { this.renderAdventureList(); this.updateChatHeader(); } if (['charName', 'charAvatar'].includes(key)) this.updateChatHeader(); } },
+            async generateAIResponse() { const adv = this.data.find(a => a.id === this.currentId); if (!adv) return; const s = JSON.parse(localStorage.getItem('roleplay_api_settings')); if (!s || !s.url || !s.key) { this.showToast("请先配置 API"); return; } const sys = [`[Character: ${adv.charName}]`, `[Description: ${adv.charDesc}]`, `[Scenario: ${adv.worldScenario}]`, `[User: ${adv.userPersona}]`, adv.jailbreak].join('\n\n'); let hist = []; const isGemini = s.url.includes('googleapis'); if (isGemini) { if(adv.firstMes) hist.push({ role: 'model', parts: [{ text: adv.firstMes }] }); adv.chatHistory.forEach(msg => hist.push({ role: msg.role === 'user' ? 'user' : 'model', parts: [{ text: msg.content }] })); } else { hist.push({ role: "system", content: sys }); if(adv.firstMes) hist.push({ role: "assistant", content: adv.firstMes }); adv.chatHistory.forEach(msg => hist.push({ role: msg.role === 'user' ? 'user' : 'assistant', content: msg.content })); } const c = document.getElementById('chat-container'); const tid = 'thinking-' + Date.now(); c.insertAdjacentHTML('beforeend', `<div id="${tid}" class="flex gap-3 animate-pulse"><div class="w-8 h-8 rounded-full bg-gray-700 shrink-0"></div><div class="bg-[#24283b] bg-opacity-60 backdrop-blur-md border border-[#2f334d] text-gray-400 p-3 text-sm rounded-r-xl rounded-bl-xl w-fit">Thinking...</div></div>`); c.scrollTop = c.scrollHeight; try { let fUrl, body, head = {}; if (isGemini) { let b = s.url.replace(/\/$/, ''); if (!b.includes('v1beta')) b += '/v1beta'; fUrl = `${b}/models/${s.model || 'gemini-1.5-flash'}:generateContent?key=${s.key}`; head = { 'Content-Type': 'application/json' }; body = JSON.stringify({ contents: hist, systemInstruction: { parts: [{ text: sys }] }, generationConfig: { temperature: parseFloat(document.getElementById('disp-temp').innerText)||0.9, maxOutputTokens: parseInt(document.getElementById('disp-tokens').innerText)||2048 } }); } else { fUrl = `${s.url}/chat/completions`; head = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${s.key}` }; body = JSON.stringify({ model: s.model, messages: hist, temperature: parseFloat(document.getElementById('disp-temp').innerText)||0.9, max_tokens: parseInt(document.getElementById('disp-tokens').innerText)||2048 }); } const res = await fetch(fUrl, { method: 'POST', headers: head, body }); if (!res.ok) throw new Error((await res.text())); const data = await res.json(); let reply = isGemini ? (data.candidates?.[0]?.content?.parts?.[0]?.text || "(No response)") : (data.choices?.[0]?.message?.content || "(No response)"); document.getElementById(tid).remove(); adv.chatHistory.push({ role: 'ai', content: reply, timestamp: Date.now() }); this.saveToLocal(); this.renderChat(); } catch (e) { document.getElementById(tid).remove(); this.showToast("API 错误"); console.error(e); c.insertAdjacentHTML('beforeend', `<div class="text-red-500 text-xs p-4 text-center w-fit">Error: ${e.message}</div>`); } },
+            regenerateResponse() { const adv = this.data.find(a => a.id === this.currentId); if (!adv || !adv.chatHistory || adv.chatHistory.length === 0) return; const last = adv.chatHistory[adv.chatHistory.length - 1]; if (last.role === 'ai') { adv.chatHistory.pop(); this.saveToLocal(); this.renderChat(); } this.generateAIResponse(); },
             deleteAdventure(id) { this.data = this.data.filter(a => a.id !== id); this.saveToLocal(); if (this.data.length === 0) this.createNewAdventure(); else { if (id === this.currentId) this.loadAdventure(this.data[0].id); else this.renderAdventureList(); } this.showToast("存档已删除"); },
             loadAdventure(id) { this.currentId = id; const adv = this.data.find(a => a.id === id); if (!adv) return; ['title', 'charName', 'charDesc', 'firstMes', 'worldScenario', 'userPersona', 'jailbreak'].forEach(key => { const el = document.getElementById(`input-${key.replace(/[A-Z]/g, m => "-" + m.toLowerCase())}`); if(el) el.value = adv[key] || ""; }); this.renderAvatar('char', adv.charAvatar); this.renderAvatar('user', adv.userAvatar); this.renderAdventureList(); this.renderChat(); },
             handleImageUpload(i, t) { const f = i.files[0]; if (!f) return; const r = new FileReader(); r.onload = (e) => { this.updateData(t, e.target.result); this.renderAvatar(t === 'charAvatar' ? 'char' : 'user', e.target.result); }; r.readAsDataURL(f); i.value = ''; },
@@ -282,6 +279,7 @@
             clearChatHistory() { if(!confirm("清空？")) return; const adv = this.data.find(a => a.id === this.currentId); adv.chatHistory = []; this.saveToLocal(); this.renderChat(); this.showToast("已清空"); },
             copyDataToClipboard() { const j = JSON.stringify(this.data, null, 2); if (navigator.clipboard && window.isSecureContext) { navigator.clipboard.writeText(j).then(() => this.showToast("已複製")).catch(() => this.showToast("複製失敗")); } else { const ta = document.createElement('textarea'); ta.value = j; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); this.showToast("已複製"); } catch (e) { this.showToast("複製失敗"); } document.body.removeChild(ta); } },
             pasteDataFromClipboard() { const raw = prompt("粘貼存檔碼:"); if (!raw) return; try { const imp = JSON.parse(raw); if (Array.isArray(imp)) { imp.forEach(a => { a.id = Date.now().toString() + Math.random().toString().slice(2,5); this.data.push(a); }); this.saveToLocal(); this.renderAdventureList(); alert(`成功讀取 ${imp.length} 個存檔`); } else { alert("格式錯誤"); } } catch (e) { alert("無效代碼"); } },
+            renderAdventureList() { const l = document.getElementById('adventure-list'); l.innerHTML = ''; this.data.forEach(adv => { const el = document.createElement('div'); el.className = `bg-[#1f2335] border ${adv.id === this.currentId ? 'border-[#ff9e64] bg-opacity-80' : 'border-[#292e42]'} rounded-lg p-3 cursor-pointer relative group hover:border-[#414868] transition-all`; el.onclick = () => { this.loadAdventure(adv.id); this.enterDashboard(); this.switchTab('settings'); }; el.innerHTML = `<div class="flex justify-between items-center"><div class="flex-1"><h3 class="font-bold text-[#c0caf5] text-sm mb-1">${adv.title || '未命名冒险'}</h3><p class="text-xs text-[#565f89]">${adv.charName || '未知角色'}</p></div><div class="flex items-center gap-2"><button onclick="event.stopPropagation(); App.enterChat('${adv.id}')" class="w-10 h-10 rounded-full bg-[#ff9e64] text-[#1a1b26] flex items-center justify-center hover:scale-110 transition-transform shadow-lg z-10"><i class="fa-solid fa-play ml-1 text-lg pointer-events-none"></i></button><button onclick="event.stopPropagation(); App.deleteAdventure('${adv.id}')" class="text-[#565f89] hover:text-red-400 p-2 z-10"><i class="fa-solid fa-trash-can pointer-events-none"></i></button></div></div>`; l.appendChild(el); }); },
             switchTab(t) { document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active')); document.getElementById(`nav-${t}`).classList.add('active'); ['adventure', 'settings', 'system'].forEach(p => { document.getElementById(`page-${p}`).style.display = (p === t) ? 'block' : 'none'; }); }
         };
         window.onload = () => App.init();
