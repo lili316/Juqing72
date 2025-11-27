@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>控制台 (SETTINGS) - 黎梨 V41 交互引擎版</title>
+    <title>控制台 (SETTINGS) - 黎梨 V43 无限仓库版</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&family=Noto+Serif+SC:wght@400;600;700&display=swap" rel="stylesheet">
@@ -74,7 +74,7 @@
             <div class="grid grid-cols-3 gap-x-8 gap-y-6"><div class="key-btn" onclick="App.inputPin(1)">1</div><div class="key-btn" onclick="App.inputPin(2)">2</div><div class="key-btn" onclick="App.inputPin(3)">3</div><div class="key-btn" onclick="App.inputPin(4)">4</div><div class="key-btn" onclick="App.inputPin(5)">5</div><div class="key-btn" onclick="App.inputPin(6)">6</div><div class="key-btn" onclick="App.inputPin(7)">7</div><div class="key-btn" onclick="App.inputPin(8)">8</div><div class="key-btn" onclick="App.inputPin(9)">9</div><div class="key-btn text-xl" onclick="App.cancelPin()"><i class="fa-solid fa-arrow-left"></i></div><div class="key-btn" onclick="App.inputPin(0)">0</div><div class="key-btn text-xl" onclick="App.clearPin()"><i class="fa-solid fa-delete-left"></i></div></div>
             <div class="mt-12 text-white/40 text-[10px] tracking-[0.3em] font-serif">VERIFICATION REQUIRED</div>
         </div>
-        <div class="absolute bottom-8 text-[10px] text-gray-500 tracking-widest font-serif opacity-50">SYSTEM V41.0 READY</div>
+        <div class="absolute bottom-8 text-[10px] text-gray-500 tracking-widest font-serif opacity-50">SYSTEM V43.0 READY</div>
     </div>
 
     <div id="app-background"></div>
@@ -151,61 +151,83 @@
     <script>
         const AssetDB = {
             db: null,
-            init() { return new Promise((res, rej) => { const r = indexedDB.open("RP_Assets_DB", 1); r.onupgradeneeded = (e) => { if (!e.target.result.objectStoreNames.contains("assets")) e.target.result.createObjectStore("assets"); }; r.onsuccess = (e) => { this.db = e.target.result; res(); }; r.onerror = (e) => rej(e); }); },
+            init() { return new Promise((res, rej) => { const r = indexedDB.open("RP_Assets_DB", 2); r.onupgradeneeded = (e) => { const d = e.target.result; if (!d.objectStoreNames.contains("assets")) d.createObjectStore("assets"); }; r.onsuccess = (e) => { this.db = e.target.result; res(); }; r.onerror = (e) => rej(e); }); },
             async save(k, d) { if (!this.db) await this.init(); return new Promise((res, rej) => { const tx = this.db.transaction(["assets"], "readwrite"); tx.objectStore("assets").put(d, k); tx.oncomplete = res; tx.onerror = rej; }); },
             async get(k) { if (!this.db) await this.init(); return new Promise((res, rej) => { const tx = this.db.transaction(["assets"], "readonly"); const r = tx.objectStore("assets").get(k); r.onsuccess = () => res(r.result); r.onerror = rej; }); },
             async delete(k) { if (!this.db) await this.init(); return new Promise((res, rej) => { const tx = this.db.transaction(["assets"], "readwrite"); tx.objectStore("assets").delete(k); tx.oncomplete = res; }); }
         };
 
-        // --- V41 新增: 全局指令接口 ---
-        window.triggerScenario = (text) => {
-             // 調用 App 內部的邏輯
-             App.handleCardSelection(text);
-        };
+        window.triggerScenario = (text) => { App.handleCardSelection(text); };
 
         const App = {
             data: [], currentId: null, fsTargetId: null, editMsgIndex: null, currentPin: "",
             audioUnlocked: false,
 
-            // --- V41 新增: 處理卡片點擊邏輯 ---
-            handleCardSelection(text) {
-                // 1. 在聊天界面顯示用戶的選擇 (模擬用戶發送)
-                // 為了美觀，可以加一個前綴，或者直接顯示選項內容
-                const userContent = "我选择了：" + text;
-                
-                // 2. 寫入數據
-                const adv = this.data.find(a => a.id === this.currentId);
-                if(!adv) return;
-                if(!adv.chatHistory) adv.chatHistory = [];
-                
-                // 寫入歷史
-                adv.chatHistory.push({ role: 'user', content: userContent, timestamp: Date.now() });
-                this.saveToLocal();
-                
-                // 3. 更新界面
-                this.renderChat();
-                
-                // 4. 滾動到底部
-                const c = document.getElementById('chat-container');
-                setTimeout(() => c.scrollTop = c.scrollHeight, 50);
-
-                // 5. 觸發 AI 回覆
-                this.generateAIResponse();
-                
-                this.showToast("剧情已触发");
-            },
-
+            // V43: 核心數據邏輯重構
             async init() {
-                try { await AssetDB.init(); } catch(e) { console.log("DB Fail"); }
-                const saved = localStorage.getItem('roleplay_saves_v2'); if (saved) { try { this.data = JSON.parse(saved); } catch(e) { this.createAdventure("默认冒险"); } } else { this.createAdventure("默认冒险"); }
+                try { await AssetDB.init(); } catch(e) { console.log("DB Fail", e); }
+                
+                // [MIGRATION LOGIC] 檢查是否有舊數據並遷移
+                const oldData = localStorage.getItem('roleplay_saves_v2');
+                const newData = await AssetDB.get('roleplay_saves_v2');
+
+                if (oldData && !newData) {
+                    // 發現舊數據且新庫為空 -> 執行遷移
+                    try {
+                        const parsed = JSON.parse(oldData);
+                        await AssetDB.save('roleplay_saves_v2', parsed);
+                        this.data = parsed;
+                        // 遷移成功後，可選清空舊數據以釋放空間，這裡先保留以防萬一
+                        // localStorage.removeItem('roleplay_saves_v2'); 
+                        this.showToast("存档已迁移至大仓库");
+                    } catch (e) {
+                        console.error("Migration Failed", e);
+                        this.createAdventure("默认冒险");
+                    }
+                } else if (newData) {
+                    // 直接讀取新倉庫
+                    this.data = newData;
+                } else {
+                    // 全新用戶
+                    this.createAdventure("默认冒险");
+                }
+
+                if (this.data.length === 0) this.createAdventure("默认冒险");
+
                 this.loadSystemSettings(); this.loadBackground(); this.loadCoverSettings(); this.loadAudioSettings();
-                if (this.data.length > 0) this.loadAdventure(this.data[0].id); else this.createAdventure("默认冒险");
+                if (this.data.length > 0) this.loadAdventure(this.data[0].id);
                 this.renderAdventureList(); this.switchTab('adventure');
                 document.getElementById('chat-container').addEventListener('click', (e) => { document.querySelectorAll('.message-group').forEach(el => el.classList.remove('active-touch')); const bubble = e.target.closest('.message-group'); if (bubble) bubble.classList.add('active-touch'); });
                 
                 this.updatePreviewThumb('bg_image', 'preview-bg');
                 this.updatePreviewThumb('cover_image', 'preview-cover');
                 this.updateAudioPreview();
+            },
+
+            // V43: 修改保存邏輯，寫入 IndexedDB
+            async saveToLocal() { 
+                try {
+                    await AssetDB.save('roleplay_saves_v2', this.data);
+                    // 同步嘗試寫入 LocalStorage 作為備份（如果放得下的話），放不下就忽略
+                    try { localStorage.setItem('roleplay_saves_v2_backup', JSON.stringify(this.data)); } catch(e) {}
+                } catch (e) {
+                    console.error("Save Error", e);
+                    this.showToast("保存失败: " + e.message);
+                }
+            },
+
+            handleCardSelection(text) {
+                const userContent = "我选择了：" + text;
+                const adv = this.data.find(a => a.id === this.currentId);
+                if(!adv) return;
+                if(!adv.chatHistory) adv.chatHistory = [];
+                adv.chatHistory.push({ role: 'user', content: userContent, timestamp: Date.now() });
+                this.saveToLocal();
+                this.renderChat();
+                const c = document.getElementById('chat-container');
+                setTimeout(() => c.scrollTop = c.scrollHeight, 50);
+                this.generateAIResponse();
+                this.showToast("剧情已触发");
             },
             
             toggleFlip(card) { card.classList.toggle('is-flipped'); },
@@ -239,7 +261,6 @@
             animateScan() { document.getElementById('scan-line').style.display = 'block'; document.getElementById('login-text').innerText = "Verifying..."; document.getElementById('login-text').classList.add('text-[#7aa2f7]', 'animate-pulse'); setTimeout(() => { document.getElementById('login-text').innerText = "Granted"; document.getElementById('login-text').classList.replace('text-[#7aa2f7]', 'text-green-400'); setTimeout(() => { document.getElementById('view-cover').classList.add('cover-hidden'); document.getElementById('view-dashboard').classList.remove('view-hidden'); }, 500); }, 1200); },
             updateCharCount(t) { document.getElementById('char-count').innerText = t.value.length + ' chars'; },
             enterDashboard() { document.getElementById('view-chat').classList.add('view-hidden'); document.getElementById('view-dashboard').classList.remove('view-hidden'); this.switchTab('adventure'); },
-            saveToLocal() { localStorage.setItem('roleplay_saves_v2', JSON.stringify(this.data)); },
             loadSystemSettings() { const s = JSON.parse(localStorage.getItem('roleplay_api_settings')) || { url: '', key: '', model: '' }; document.getElementById('input-api-url').value = s.url || ''; document.getElementById('input-api-key').value = s.key || ''; if(s.model) { const sel = document.getElementById('select-model'); sel.innerHTML = `<option value="${s.model}">${s.model}</option>`; sel.value = s.model; } this.loadCoverSettings(); },
             saveSystemSettings() { const url = document.getElementById('input-api-url').value; const key = document.getElementById('input-api-key').value; const model = document.getElementById('select-model').value; const welcomeText = document.getElementById('input-welcome-text').value; const passcode = document.getElementById('input-passcode').value; const old = JSON.parse(localStorage.getItem('roleplay_api_settings')) || {}; const newS = { ...old, url, key, model, welcomeText, passcode }; localStorage.setItem('roleplay_api_settings', JSON.stringify(newS)); this.renderAestheticTitle(welcomeText); },
             async fetchModels() { let url = document.getElementById('input-api-url').value.replace(/\/$/, ''); const key = document.getElementById('input-api-key').value; const select = document.getElementById('select-model'); if (!url) return alert("请先填写 API 地址"); select.innerHTML = '<option>连接中...</option>'; const fallback = ["gemini-1.5-flash", "gemini-1.5-pro", "gemini-1.5-flash-8b", "gemini-1.0-pro"]; try { let fUrl = "", h = {}; if (url.includes('googleapis.com')) { if (!url.includes('v1beta')) url += '/v1beta'; fUrl = `${url}/models?key=${key}`; } else { fUrl = `${url}/models`; h = { 'Authorization': `Bearer ${key}` }; } const res = await fetch(fUrl, { method: 'GET', headers: h }); if (!res.ok) throw new Error("Err"); const data = await res.json(); const models = data.models || data.data || []; select.innerHTML = ''; if (models.length === 0) { select.innerHTML = '<option value="">未找到</option>'; return; } models.forEach(m => { let id = m.name || m.id; if (id.startsWith('models/')) id = id.replace('models/', ''); const opt = document.createElement('option'); opt.value = id; opt.text = id; select.appendChild(opt); }); this.showToast(`已获取 ${models.length} 个模型`); } catch (err) { if (url.includes('googleapis')) { select.innerHTML = ''; fallback.forEach(m => { const opt = document.createElement('option'); opt.value = m; opt.text = m; select.appendChild(opt); }); this.showToast("已加载内置 Gemini 列表"); select.value = fallback[0]; this.saveSystemSettings(); } else { select.innerHTML = '<option value="">获取失败</option>'; const manual = prompt("连接失败，请输入模型：", "gpt-3.5-turbo"); if(manual) { select.innerHTML = `<option value="${manual}">${manual}</option>`; this.saveSystemSettings(); } } } },
