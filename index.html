@@ -3,17 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>控制台 (SETTINGS) - 黎梨 V79 調色修復版</title>
+    <title>控制台 (SETTINGS) - 黎梨 V82 樣式隔離版</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&family=Noto+Serif+SC:wght@400;600;700&display=swap" rel="stylesheet">
     
     <style>
-        /* --- V79 核心变量 (修復變量名) --- */
+        /* --- V79 核心变量 --- */
         :root {
             --chat-font-size: 15px;
             --chat-line-height: 1.625;
-            --chat-color: #c0caf5; /* [V79] 統一變量名 */
+            --chat-color: #c0caf5; 
             --chat-font-weight: 300;
             --theme-orange: #ff9e64; 
         }
@@ -26,17 +26,19 @@
             -webkit-tap-highlight-color: transparent; 
         }
         
-        /* [V78] 智能排版引擎 */
+        /* [V82] 修復：移除 !important 允許卡片自定義文字顏色 */
         .ai-content-area {
             width: 100%;
             display: block; 
+            position: relative; 
+            color: var(--chat-color); /* 默認顏色，但不強制，允許被覆蓋 */
         }
 
         .dynamic-text {
             font-size: var(--chat-font-size);
             line-height: var(--chat-line-height);
             font-weight: var(--chat-font-weight);
-            color: var(--chat-color) !important; /* [V79] 綁定變量 */
+            color: var(--chat-color); /* [V82] 關鍵修復：移除了 !important */
             white-space: pre-wrap; 
             word-wrap: break-word;
             text-align: left; 
@@ -53,12 +55,12 @@
             max-width: 100% !important;
         }
 
-        /* [V79] 卡片樣式修復：顏色綁定變量 */
-        .ai-content-area div[style*="background"], 
+        /* [V82] 針對默認卡片的樣式，保持藍白色，但也允許被特定樣式覆蓋 */
+        .ai-content-area div[style*="background-color: rgba"], 
         .ai-content-area div[class*="card"] {
             background-color: rgba(30, 32, 40, 0.6) !important; 
             border: 1px solid rgba(255, 255, 255, 0.1) !important;
-            color: var(--chat-color) !important; /* [V79] 關鍵修復：不再寫死顏色 */
+            color: var(--chat-color);
             box-shadow: 0 4px 20px rgba(0,0,0,0.5) !important; 
             border-radius: 8px !important;
             white-space: normal !important; 
@@ -1151,7 +1153,6 @@ this.renderSaveList(); this.showToast("時間線已抹除"); },
                 this.generateAIResponse('phone');
             },
 
-            // [V79] RENDER FIX: SEPARATE TEXT AND CARD LOGIC
             renderChat() { 
                 const script = this.data.find(s => s.id === this.currentScriptId); if(!script) return; 
                 const save = script.saves ? script.saves.find(s => s.id === this.currentSaveId) : null; if (!save) return; 
@@ -1169,58 +1170,6 @@ this.renderSaveList(); this.showToast("時間線已抹除"); },
                     });
                 }
                 this.updateChatHeader(); 
-            },
-
-            // [V79] UPDATED BUBBLE FUNCTION
-            appendChatBubble(text, role, idx, timestamp = Date.now(), customName = null) { 
-                const script = this.data.find(s => s.id === this.currentScriptId); 
-                const save = script.saves.find(s => s.id === this.currentSaveId); 
-                const isUser = role === 'user'; 
-                
-                let avatar = "";
-                let name = "";
-                if (isUser) {
-                    let activePersona = null;
-                    if (save && script.personas) {
-                        activePersona = script.personas.find(p => p.id === save.personaId);
-                    }
-                    if (!activePersona && script.personas && script.personas.length > 0) activePersona = script.personas[0]; 
-                    
-                    avatar = activePersona ? (activePersona.avatar || "https://api.dicebear.com/7.x/initials/svg?seed=ME") : "https://api.dicebear.com/7.x/initials/svg?seed=ME";
-                    name = customName || (activePersona ? activePersona.name : "YOU");
-                } else {
-                    avatar = script.charAvatar || "https://api.dicebear.com/7.x/adventurer/svg?seed=Gener";
-                    name = script.charName || "GM";
-                }
-
-                const date = new Date(timestamp); 
-                const timeStr = `${date.getHours().toString().padStart(2,'0')}:${date.getMinutes().toString().padStart(2,'0')}`; 
-                let html = "";
-                
-                if (isUser) { 
-                    const bubbleColor = "bg-[#3d59a1]/80 backdrop-blur-md text-white"; 
-                    html = `<div class="flex flex-row-reverse gap-3 group message-group animate-fade-in-up relative mb-4" id="msg-${idx}"><img src="${avatar}" class="w-8 h-8 rounded-full mt-1 shrink-0 object-cover bg-[#1a1b26]/50 border border-[#2f334d]/50"><div class="flex flex-col gap-1 max-w-[85%] items-end relative"><div class="flex items-center gap-2"><span class="text-[10px] text-[#7aa2f7] font-bold">${name}</span><div class="msg-actions relative flex gap-3 mr-2"><button onclick="App.editMessage(${idx})" class="text-sm text-gray-500 hover:text-[#ff9e64] transition-colors cursor-pointer"><i class="fa-solid fa-pencil"></i></button>${idx !== -1 ? `<button onclick="App.deleteMessage(${idx})" class="text-sm text-gray-500 hover:text-red-400 transition-colors cursor-pointer"><i class="fa-solid fa-trash-can"></i></button>` : ''}</div></div><div class="${bubbleColor} p-2 px-3 text-sm rounded-l-xl rounded-br-xl shadow-sm relative z-10 w-fit"><div class="whitespace-pre-wrap break-words">${text}</div><span class="float-right text-[9px] opacity-50 ml-2 mt-1 select-none font-mono tracking-tighter">${timeStr}</span></div></div></div>`; 
-                } else { 
-                    // [V79] AI Message Layout: Centered & Full Width for Cards
-                    html = `
-                    <div class="flex flex-col gap-2 group message-group animate-fade-in-up relative mb-6 w-full items-center" id="msg-${idx}">
-                        <div class="flex items-center justify-between w-full px-1">
-                            <div class="flex items-center gap-3">
-                                <img src="${avatar}" class="w-8 h-8 rounded-full object-cover bg-[#1a1b26]/50 border border-[#414868]/50 shadow-sm">
-                                <span class="text-xs text-[#ff9e64] font-bold tracking-wider uppercase">${name}</span>
-                            </div>
-                            <div class="msg-actions flex gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <button onclick="App.editMessage(${idx})" class="text-xs text-gray-500 hover:text-[#ff9e64]"><i class="fa-solid fa-pencil"></i></button>
-                                ${idx !== -1 ? `<button onclick="App.deleteMessage(${idx})" class="text-xs text-gray-500 hover:text-red-400"><i class="fa-solid fa-trash-can"></i></button>` : ''}
-                            </div>
-                        </div>
-                        <div class="ai-content-area dynamic-text">
-                            ${text}
-                        </div>
-                        <div class="text-[9px] text-[#565f89] font-mono opacity-30 self-end mr-2">${timeStr}</div>
-                    </div>`; 
-                }
-                document.getElementById('chat-container').insertAdjacentHTML('beforeend', html); 
             },
 
             renderPhoneChat() {
@@ -1315,7 +1264,32 @@ this.renderSaveList(); this.showToast("時間線已抹除"); },
             openFullscreen(id, t) { this.fsTargetId = id; document.getElementById('fs-textarea').value = document.getElementById(id).value; document.getElementById('fs-title').innerText = "正在編輯: " + t; document.getElementById('fullscreen-editor').style.display = 'flex'; document.getElementById('fs-textarea').oninput = (e) => { document.getElementById(this.fsTargetId).value = e.target.value; document.getElementById(this.fsTargetId).dispatchEvent(new Event('input')); }; },
             closeFullscreen() { document.getElementById('fullscreen-editor').style.display = 'none'; this.fsTargetId = null; if (this.editMsgIndex !== null) { const script = this.data.find(s => s.id === this.currentScriptId); const save = script.saves.find(s => s.id === this.currentSaveId); if (script && save) { const n = document.getElementById('fs-textarea').value; if (this.editMsgIndex === -1) { script.firstMes = n; const el = document.getElementById('input-first-mes'); if(el) el.value = n; } else { save.chatHistory[this.editMsgIndex].content = n; } this.saveToLocal(); this.renderChat(); } this.editMsgIndex = null; } },
             
-            // [V78] FIX: Centered AI Message Layout
+            // [V82 FIX] 針對特定消息 ID 的樣式隔離
+            activateInteractiveContent(container) {
+                if (!container) return;
+                const uniqueId = container.id; // 獲取容器 ID，如 msg-5
+
+                // A. 處理 CSS (將 body/html 替換為該容器的 ID)
+                const styles = container.querySelectorAll('style');
+                styles.forEach(oldStyle => {
+                    let css = oldStyle.innerHTML;
+                    // 將 body, html 替換為 #msg-xxx .ai-content-area
+                    // 使用正則確保只替換選擇器，避免替換屬性值
+                    css = css.replace(/(body|html)(?![a-zA-Z0-9-_])/gi, `#${uniqueId} .ai-content-area`); 
+                    oldStyle.innerHTML = css;
+                });
+
+                // B. 處理 JS (提取並執行)
+                const scripts = container.querySelectorAll('script');
+                scripts.forEach(oldScript => {
+                    const newScript = document.createElement('script');
+                    Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
+                    newScript.textContent = oldScript.textContent;
+                    container.appendChild(newScript);
+                });
+            },
+
+            // [V82 FIX]
             appendChatBubble(text, role, idx, timestamp = Date.now(), customName = null) { 
                 const script = this.data.find(s => s.id === this.currentScriptId); 
                 const save = script.saves.find(s => s.id === this.currentSaveId); 
@@ -1344,11 +1318,35 @@ this.renderSaveList(); this.showToast("時間線已抹除"); },
                     const bubbleColor = "bg-[#3d59a1]/80 backdrop-blur-md text-white"; 
                     html = `<div class="flex flex-row-reverse gap-3 group message-group animate-fade-in-up relative mb-4" id="msg-${idx}"><img src="${avatar}" class="w-8 h-8 rounded-full mt-1 shrink-0 object-cover bg-[#1a1b26]/50 border border-[#2f334d]/50"><div class="flex flex-col gap-1 max-w-[85%] items-end relative"><div class="flex items-center gap-2"><span class="text-[10px] text-[#7aa2f7] font-bold">${name}</span><div class="msg-actions relative flex gap-3 mr-2"><button onclick="App.editMessage(${idx})" class="text-sm text-gray-500 hover:text-[#ff9e64] transition-colors cursor-pointer"><i class="fa-solid fa-pencil"></i></button>${idx !== -1 ? `<button onclick="App.deleteMessage(${idx})" class="text-sm text-gray-500 hover:text-red-400 transition-colors cursor-pointer"><i class="fa-solid fa-trash-can"></i></button>` : ''}</div></div><div class="${bubbleColor} p-2 px-3 text-sm rounded-l-xl rounded-br-xl shadow-sm relative z-10 w-fit"><div class="whitespace-pre-wrap break-words">${text}</div><span class="float-right text-[9px] opacity-50 ml-2 mt-1 select-none font-mono tracking-tighter">${timeStr}</span></div></div></div>`; 
                 } else { 
-                    // [V78] AI Message Layout: Centered & Full Width for Cards
-                    html = `<div class="flex flex-col gap-2 group message-group animate-fade-in-up relative mb-6 w-full items-center" id="msg-${idx}"><div class="flex items-center justify-between w-full px-1"><div class="flex items-center gap-3"><img src="${avatar}" class="w-8 h-8 rounded-full object-cover bg-[#1a1b26]/50 border border-[#414868]/50 shadow-sm"><span class="text-xs text-[#ff9e64] font-bold tracking-wider uppercase">${name}</span></div><div class="msg-actions flex gap-3 opacity-0 group-hover:opacity-100 transition-opacity"><button onclick="App.editMessage(${idx})" class="text-xs text-gray-500 hover:text-[#ff9e64]"><i class="fa-solid fa-pencil"></i></button>${idx !== -1 ? `<button onclick="App.deleteMessage(${idx})" class="text-xs text-gray-500 hover:text-red-400"><i class="fa-solid fa-trash-can"></i></button>` : ''}</div></div><div class="ai-content-area dynamic-text"><div class="whitespace-pre-wrap break-words w-full">${text}</div></div><div class="text-[9px] text-[#565f89] font-mono opacity-30 self-end mr-2">${timeStr}</div></div>`; 
+                    html = `
+                    <div class="flex flex-col gap-2 group message-group animate-fade-in-up relative mb-6 w-full items-center" id="msg-${idx}">
+                        <div class="flex items-center justify-between w-full px-1">
+                            <div class="flex items-center gap-3">
+                                <img src="${avatar}" class="w-8 h-8 rounded-full object-cover bg-[#1a1b26]/50 border border-[#414868]/50 shadow-sm">
+                                <span class="text-xs text-[#ff9e64] font-bold tracking-wider uppercase">${name}</span>
+                            </div>
+                            <div class="msg-actions flex gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <button onclick="App.editMessage(${idx})" class="text-xs text-gray-500 hover:text-[#ff9e64]"><i class="fa-solid fa-pencil"></i></button>
+                                ${idx !== -1 ? `<button onclick="App.deleteMessage(${idx})" class="text-xs text-gray-500 hover:text-red-400"><i class="fa-solid fa-trash-can"></i></button>` : ''}
+                            </div>
+                        </div>
+                        <div class="ai-content-area dynamic-text">
+                            ${text}
+                        </div>
+                        <div class="text-[9px] text-[#565f89] font-mono opacity-30 self-end mr-2">${timeStr}</div>
+                    </div>`; 
                 }
+                
                 document.getElementById('chat-container').insertAdjacentHTML('beforeend', html); 
+
+                if (!isUser) {
+                    const newMsg = document.getElementById(`msg-${idx}`);
+                    if(newMsg) {
+                        this.activateInteractiveContent(newMsg);
+                    }
+                }
             },
+
             updateChatHeader() { const script = this.data.find(s => s.id === this.currentScriptId); if(!script) return; document.getElementById('chat-title').innerText = script.title || "未命名"; document.getElementById('chat-header-avatar').src = script.charAvatar || "https://api.dicebear.com/7.x/adventurer/svg?seed=Gener"; },
             
             editMessage(idx) { const script = this.data.find(s => s.id === this.currentScriptId); const save = script.saves.find(s => s.id === this.currentSaveId); let c = idx === -1 ? script.firstMes : save.chatHistory[idx].content; this.editMsgIndex = idx; document.getElementById('fs-textarea').value = c; document.getElementById('fs-title').innerText = "正在編輯消息"; document.getElementById('fullscreen-editor').style.display = 'flex'; },
