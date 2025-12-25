@@ -3,19 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>控制台 (SETTINGS) - 黎梨 V84 完美交互版</title>
+    <title>控制台 (SETTINGS) - 黎梨 V89 状态记忆版</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&family=Noto+Serif+SC:wght@400;600;700&display=swap" rel="stylesheet">
     
     <style>
-        /* --- V79 核心美學回歸 --- */
+        /* --- 核心变量 --- */
         :root {
             --chat-font-size: 15px;
             --chat-line-height: 1.625;
             --chat-color: #c0caf5; 
             --chat-font-weight: 300;
             --theme-orange: #ff9e64; 
+            --theme-blue: #7aa2f7;
+            --theme-green: #9ece6a;
+            --bg-dark: #1a1b26;
+            --bg-card: rgba(30, 32, 40, 0.6);
+            --border-color: rgba(255, 255, 255, 0.1);
         }
 
         body { 
@@ -26,7 +31,7 @@
             -webkit-tap-highlight-color: transparent; 
         }
         
-        /* 聊天氣泡文本區域 - 保持 V79 的高級感 */
+        /* 聊天气泡文本区域 */
         .dynamic-text {
             font-size: var(--chat-font-size);
             line-height: var(--chat-line-height);
@@ -37,33 +42,149 @@
             text-align: left; 
         }
 
-        /* [V84] 小劇場沙盒容器 - 樣式隔離的核心 */
+        /* 小剧场沙盒容器 */
         .sandbox-root {
             position: relative;
             display: block;
             width: 100%;
             max-width: 100%;
             margin-top: 12px;
-            
-            /* 關鍵：重置一部分繼承樣式，防止被外部氣泡影響，但保留透明度以便融入背景 */
             text-align: left;
             line-height: normal;
             font-family: sans-serif;
-            color: initial; /* 讓內部 CSS 決定顏色，如果內部沒寫，則是黑色 */
-            
-            /* 視覺修正 */
+            color: initial;
             border-radius: 8px;
             overflow: hidden;
             transition: all 0.3s ease;
         }
+        .sandbox-root img { max-width: 100%; height: auto; }
+
+        /* 竖版折叠 UI 样式 */
+        .preset-card {
+            background: rgba(20, 20, 25, 0.6);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            margin-bottom: 10px;
+            overflow: hidden;
+            transition: all 0.2s;
+        }
+        .preset-card-header {
+            padding: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.02);
+            cursor: pointer;
+        }
+        .preset-card-header:active { background: rgba(255, 255, 255, 0.05); }
+        .preset-title { font-size: 14px; font-weight: bold; color: #c0caf5; }
+        .preset-meta { font-size: 10px; color: #565f89; margin-top: 2px; }
         
-        /* 修復圖片溢出 */
-        .sandbox-root img {
-            max-width: 100%;
-            height: auto;
+        .preset-body {
+            display: none; 
+            background: rgba(0, 0, 0, 0.2);
+            border-top: 1px solid var(--border-color);
+        }
+        .preset-body.expanded { display: block; animation: slideDown 0.2s ease-out; }
+        
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-5px); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
-        /* 封面 & 动画 */
+        .prompt-item {
+            padding: 10px 12px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .prompt-item:last-child { border-bottom: none; }
+        
+        .prompt-main { flex: 1; margin-right: 10px; cursor: pointer; }
+        .prompt-name { font-size: 13px; color: #a9b1d6; font-weight: 500; margin-bottom: 4px; display: block; }
+        .tag-row { display: flex; flex-wrap: wrap; gap: 4px; }
+        .sys-tag { font-size: 9px; padding: 2px 6px; border-radius: 10px; border: 1px solid #3d59a1; color: #7aa2f7; background: rgba(61, 89, 161, 0.2); }
+        .usr-tag { font-size: 9px; padding: 2px 6px; border-radius: 10px; border: 1px solid #485e30; color: #9ece6a; background: rgba(72, 94, 48, 0.2); }
+        .depth-tag { font-size: 9px; padding: 2px 6px; border-radius: 10px; border: 1px solid #565f89; color: #787c99; background: rgba(86, 95, 137, 0.2); }
+
+        /* 开关样式 */
+        .switch-wrapper { display: flex; align-items: center; }
+        .switch-sm { position: relative; width: 36px; height: 20px; flex-shrink: 0; display: inline-block; }
+        .switch-sm input { opacity: 0; width: 0; height: 0; }
+        .slider-sm { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #2f334d; transition: .3s; border-radius: 20px; border: 1px solid #414868; }
+        .slider-sm:before { position: absolute; content: ""; height: 14px; width: 14px; left: 2px; bottom: 2px; background-color: #787c99; transition: .3s; border-radius: 50%; }
+        input:checked + .slider-sm { background-color: var(--theme-green); border-color: var(--theme-green); }
+        input:checked + .slider-sm:before { transform: translateX(16px); background-color: #fff; }
+
+        /* 按钮组 */
+        .action-btn { 
+            width: 24px; height: 24px; margin-right: 8px; 
+            display: flex; align-items: center; justify-content: center;
+            color: #565f89; border: 1px solid #414868; 
+            border-radius: 4px; font-size: 12px; 
+            transition: all 0.2s; cursor: pointer;
+        }
+        .action-btn:hover { color: var(--theme-orange); border-color: var(--theme-orange); background: rgba(255, 158, 100, 0.1); }
+        
+        .toggle-all-btn {
+            padding: 4px 8px; 
+            color: #7aa2f7; border: 1px solid #3d59a1; 
+            border-radius: 4px; font-size: 10px; 
+            transition: all 0.2s; cursor: pointer;
+            margin-right: 10px;
+        }
+        .toggle-all-btn:hover { background: rgba(122, 162, 247, 0.2); }
+
+        /* [V89] 破限文件列表样式 */
+        .file-list-container {
+            display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px;
+        }
+        .file-pill {
+            display: flex; align-items: center; justify-content: space-between;
+            background: #24283b; border: 1px solid #414868;
+            border-radius: 6px; padding: 8px 12px;
+            font-size: 12px; color: #c0caf5;
+        }
+        .file-pill .info { display: flex; align-items: center; gap: 8px; overflow: hidden; }
+        .file-pill .name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 180px; }
+        .file-pill .size { color: #565f89; font-size: 10px; }
+        .file-pill .del-btn { color: #565f89; cursor: pointer; padding: 4px; }
+        .file-pill .del-btn:hover { color: #ff5d5d; }
+
+        .upload-zone {
+            border: 1px dashed #414868; border-radius: 6px;
+            padding: 10px; text-align: center;
+            background: rgba(30, 32, 40, 0.4);
+            cursor: pointer; transition: all 0.2s;
+            color: #787c99; font-size: 12px;
+        }
+        .upload-zone:hover { border-color: #7aa2f7; color: #c0caf5; background: rgba(30, 32, 40, 0.8); }
+
+        /* 内容弹窗 */
+        #content-modal {
+            position: fixed; inset: 0; z-index: 200;
+            background: rgba(0, 0, 0, 0.8); backdrop-filter: blur(5px);
+            display: none; align-items: center; justify-content: center;
+        }
+        #content-modal.show { display: flex; animation: fadeIn 0.2s; }
+        .modal-box {
+            background: #1f2335; border: 1px solid #414868;
+            width: 90%; max-width: 500px; height: 70%;
+            border-radius: 12px; display: flex; flex-direction: column;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.8);
+        }
+        .modal-header { padding: 15px; border-bottom: 1px solid #292e42; display: flex; justify-content: space-between; align-items: center; }
+        .modal-title { font-weight: bold; color: var(--theme-orange); font-size: 14px; }
+        .modal-body { flex: 1; padding: 15px; overflow-y: auto; }
+        .modal-footer { padding: 15px; border-top: 1px solid #292e42; display: flex; justify-content: flex-end; gap: 10px; }
+        .content-viewer { 
+            width: 100%; height: 100%; background: #16161e; 
+            color: #a9b1d6; border: none; outline: none; 
+            font-family: monospace; font-size: 12px; resize: none; padding: 10px; border-radius: 6px;
+        }
+
+        /* UI 组件 */
         #view-cover { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-size: cover; background-position: center; z-index: 10000; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: opacity 1s ease-in-out, transform 1s ease-in-out; pointer-events: none; }
         .login-wrapper { position: relative; width: 100px; height: 100px; display: flex; justify-content: center; align-items: center; margin-top: 8rem; pointer-events: auto; }
         #login-btn { position: relative; pointer-events: none; transition: transform 0.1s; }
@@ -100,7 +221,6 @@
         .toast-enter { transform: translateY(100%); opacity: 0; } .toast-enter-active { transform: translateY(0); opacity: 1; transition: all 0.3s ease; } .toast-exit { transform: translateY(0); opacity: 1; } .toast-exit-active { transform: translateY(100%); opacity: 0; transition: all 0.3s ease; }
         .preview-thumb { width: 24px; height: 24px; border-radius: 4px; object-fit: cover; border: 1px solid #414868; margin-left: 8px; display: none; } .preview-thumb.show { display: block; }
         .preview-audio-icon { color: #7aa2f7; margin-left: 8px; display: none; cursor: pointer; } .preview-audio-icon.show { display: block; }
-        .toggle-checkbox:checked { right: 0; border-color: var(--theme-orange); } .toggle-checkbox:checked + .toggle-label { background-color: var(--theme-orange); } .toggle-switch-container { position: relative; width: 44px; height: 24px; } .toggle-label { display: block; overflow: hidden; cursor: pointer; border: 0 solid #bbb; border-radius: 20px; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(36, 40, 59, 0.8); transition: background-color 0.2s; border: 1px solid #414868; } .toggle-label:before { content: ""; display: block; width: 18px; height: 18px; margin: 2px; background: #c0caf5; position: absolute; top: 0; bottom: 0; right: 20px; border-radius: 50%; transition: all 0.2s; } .toggle-checkbox:checked + .toggle-label:before { right: 0; background-color: #1a1b26; } .toggle-checkbox { position: absolute; visibility: hidden; }
         #appearance-menu { position: absolute; top: 56px; right: 10px; width: 260px; background: rgba(31, 35, 53, 0.85); backdrop-filter: blur(20px); border: 1px solid rgba(65, 72, 104, 0.5); border-radius: 12px; padding: 16px; z-index: 100; box-shadow: 0 10px 30px rgba(0,0,0,0.5); display: none; transform-origin: top right; animation: scaleIn 0.2s ease; } #appearance-menu.show { display: block; } @keyframes scaleIn { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
         .setting-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; } .setting-label { font-size: 12px; color: #787c99; font-weight: bold; } .setting-btn-group { display: flex; background: rgba(22, 22, 30, 0.5); border-radius: 6px; padding: 2px; border: 1px solid rgba(41, 46, 66, 0.5); gap: 2px; } .setting-btn { flex: 1; padding: 4px 8px; font-size: 12px; color: #565f89; border-radius: 4px; text-align: center; cursor: pointer; transition: all 0.2s; } .setting-btn.active { background: rgba(59, 66, 97, 0.8); color: #c0caf5; font-weight: bold; }
         #input-name-display { cursor: pointer; border-bottom: 1px dashed #565f89; padding-bottom: 1px; transition: color 0.2s; } #input-name-display:hover { color: var(--theme-orange); border-color: var(--theme-orange); }
@@ -121,7 +241,6 @@
         }
         #music-widget-min.playing .vinyl-base { animation: breathe-beat 1.5s infinite ease-in-out alternate; box-shadow: 0 0 20px rgba(255, 158, 100, 0.3); border-color: rgba(255, 158, 100, 0.4); }
         @keyframes breathe-beat { 0% { transform: scale(1); } 100% { transform: scale(1.05); } }
-        
         .vinyl-body { 
             width: 70%; height: 70%; border-radius: 50%; 
             background: rgba(0,0,0,0.5); 
@@ -130,7 +249,6 @@
             animation: spin 4s linear infinite; animation-play-state: paused; 
         }
         #music-widget-min.playing .vinyl-body { animation-play-state: running; }
-        
         .vinyl-reflection { position: absolute; inset: 0; border-radius: 50%; background: conic-gradient(transparent 0deg, rgba(255,255,255,0.2) 40deg, rgba(255,255,255,0.4) 50deg, rgba(255,255,255,0.2) 60deg, transparent 100deg, transparent 180deg, rgba(255,255,255,0.2) 220deg, rgba(255,255,255,0.4) 230deg, rgba(255,255,255,0.2) 240deg, transparent 280deg); opacity: 0.8; pointer-events: none; }
         .vinyl-label { width: 35%; height: 35%; border-radius: 50%; background: var(--theme-orange); border: 2px solid rgba(255,255,255,0.2); position: relative; opacity: 0.8; }
         .vinyl-label::after { content: ''; position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); width: 6px; height: 6px; background: rgba(255,255,255,0.8); border-radius: 50%; }
@@ -292,7 +410,24 @@
     <!-- Modal -->
     <div id="modal-overlay"><div class="modal-card"><h3 class="text-[#c0caf5] font-bold text-lg mb-1 font-serif">靈魂選擇</h3><p class="text-[10px] text-[#787c99] mb-4">此时间线，你将以何种身份存在？</p><div id="persona-select-list" class="grid grid-cols-2 gap-3 mb-4 max-h-[200px] overflow-y-auto custom-scroll"></div><button onclick="document.getElementById('modal-overlay').classList.remove('active')" class="text-xs text-[#565f89] hover:text-[#c0caf5] mt-2">取消</button></div></div>
 
-    <!-- Music Widget (Draggable Min) -->
+    <!-- Content Viewer Modal -->
+    <div id="content-modal">
+        <div class="modal-box">
+            <div class="modal-header">
+                <span class="modal-title" id="content-modal-title">内容查看</span>
+                <button onclick="document.getElementById('content-modal').classList.remove('show')" class="text-[#565f89] hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body custom-scroll">
+                <textarea id="content-modal-textarea" class="content-viewer" readonly></textarea>
+            </div>
+            <div class="modal-footer">
+                <button onclick="document.getElementById('content-modal').classList.remove('show')" class="text-xs text-[#565f89] px-3 py-1 rounded border border-[#414868] hover:bg-[#24283b]">关闭</button>
+                <button id="content-modal-save-btn" class="text-xs text-[#1a1b26] bg-[#7aa2f7] px-3 py-1 rounded font-bold hover:bg-[#c0caf5] hidden">保存覆写</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Music Widget -->
     <div id="music-widget-min"><div class="vinyl-base"><div class="vinyl-body"><div class="vinyl-reflection"></div><div class="vinyl-label"></div></div></div></div>
 
     <!-- Expanded Player -->
@@ -316,7 +451,7 @@
         <div id="playlist-box" class="playlist-box custom-scroll"><div class="text-center text-[#565f89] text-[10px] py-2">暫無播放列表</div></div>
     </div>
     
-    <!-- [V73] Floating Phone Structure -->
+    <!-- Floating Phone -->
     <div id="phone-overlay-backdrop" onclick="App.togglePhone()"></div>
     <div id="view-phone">
         <div class="phone-notch"></div>
@@ -364,14 +499,31 @@
             <div class="flex items-center gap-3"><i class="fa-solid fa-book-journal-whills text-[#ff9e64] text-lg"></i><span class="font-bold text-lg text-[#c0caf5]">剧本库</span></div>
             <button class="text-[#565f89] hover:text-[#ff9e64] transition-colors" onclick="App.manualSave()" title="强制保存"><i class="fa-solid fa-check text-xl"></i></button>
         </header>
-        <nav class="h-12 bg-[#1f2335]/60 backdrop-blur-md flex items-center justify-around border-b border-[#292e42]/50 shrink-0 text-[#787c99]"><div class="nav-item active w-1/3 text-center py-3 cursor-pointer" onclick="App.switchTab('adventure')" id="nav-adventure">剧本</div><div class="nav-item w-1/3 text-center py-3 cursor-pointer" onclick="App.switchTab('system')" id="nav-system">系统</div></nav>
+        <nav class="h-12 bg-[#1f2335]/60 backdrop-blur-md flex items-center justify-around border-b border-[#292e42]/50 shrink-0 text-[#787c99]">
+            <div class="nav-item active w-1/3 text-center py-3 cursor-pointer" onclick="App.switchTab('adventure')" id="nav-adventure">剧本</div>
+            <div class="nav-item w-1/3 text-center py-3 cursor-pointer" onclick="App.switchTab('presets')" id="nav-presets">预设</div>
+            <div class="nav-item w-1/3 text-center py-3 cursor-pointer" onclick="App.switchTab('system')" id="nav-system">系统</div>
+        </nav>
         <main class="flex-1 overflow-y-auto custom-scroll relative">
             <div id="page-adventure" class="page-section p-4 space-y-4 pb-24">
                 <div onclick="App.createNewScript()" class="border-2 border-dashed border-[#3b4261]/80 rounded-lg h-16 flex items-center justify-center cursor-pointer text-[#7aa2f7] hover:text-[#ff9e64] hover:border-[#ff9e64] transition-all bg-[#1a1b26]/60 hover:bg-[#1f2335]/80 backdrop-blur-sm"><div class="flex items-center gap-2"><i class="fa-solid fa-feather-pointed"></i><span class="font-medium">创作新剧本 (NEW SCRIPT)</span></div></div>
                 <div id="script-list" class="space-y-3"></div>
                 <div class="pt-6 border-t border-[#292e42]/50 mt-6"><label class="text-xs font-bold text-[#565f89] uppercase mb-3 block">数据管理</label><div class="flex gap-3"><button onclick="App.exportData()" class="flex-1 bg-[#24283b]/80 hover:bg-[#2f334d] text-[#c0caf5] py-2 rounded border border-[#414868]/50 flex items-center justify-center gap-2 transition-colors backdrop-blur-sm"><i class="fa-solid fa-file-export text-[#7aa2f7]"></i> 备份</button><button onclick="document.getElementById('file-backup-import').click()" class="flex-1 bg-[#24283b]/80 hover:bg-[#2f334d] text-[#c0caf5] py-2 rounded border border-[#414868]/50 flex items-center justify-center gap-2 transition-colors backdrop-blur-sm"><i class="fa-solid fa-file-import text-[#ff9e64]"></i> 恢复</button><input type="file" id="file-backup-import" accept=".json" class="hidden-file-input" onchange="App.importData(this)"></div></div>
             </div>
+            
+            <!-- 预设管理页面 (全局) -->
+            <div id="page-presets" class="hidden p-4 space-y-4 pb-24">
+                <div onclick="document.getElementById('file-preset-import').click()" class="border-2 border-dashed border-[#3b4261]/80 rounded-lg h-16 flex items-center justify-center cursor-pointer text-[#9ece6a] hover:text-[#ff9e64] hover:border-[#ff9e64] transition-all bg-[#1a1b26]/60 hover:bg-[#1f2335]/80 backdrop-blur-sm">
+                    <div class="flex items-center gap-2"><i class="fa-solid fa-file-import"></i><span class="font-medium">导入 ST 预设 (.json)</span></div>
+                    <input type="file" id="file-preset-import" accept=".json" class="hidden-file-input" onchange="App.handlePresetImport(this)">
+                </div>
+                <div id="preset-list-container" class="space-y-3">
+                    <div class="text-center text-[#565f89] text-xs py-10">暂无预设，请导入...</div>
+                </div>
+            </div>
+
             <div id="page-system" class="hidden p-4 space-y-6">
+                <!-- 系统设置 -->
                 <div class="space-y-4 border-b border-[#292e42]/50 pb-6">
                     <label class="text-xs font-bold text-[#bb9af7] uppercase tracking-wider flex items-center gap-2"><i class="fa-solid fa-wand-magic-sparkles"></i> 門戶與個性化</label>
                     <div class="flex justify-between items-center"><span class="text-[10px] text-[#7a85b8] flex items-center gap-2">全局壁紙 <img id="preview-bg" class="preview-thumb"></span><div class="flex gap-2"><label class="cursor-pointer text-[10px] bg-[#24283b]/80 px-2 py-1 rounded border border-[#414868]/50 text-[#c0caf5]">上傳<input type="file" id="file-bg-upload" accept="image/*" class="hidden-file-input" onchange="App.handleBgUpload(this)"></label><button onclick="App.clearBackground()" class="text-[10px] bg-[#24283b]/80 px-2 py-1 rounded border border-[#414868]/50 text-red-400">清除</button></div></div>
@@ -416,6 +568,7 @@
         </header>
         <main class="flex-1 overflow-y-auto custom-scroll relative">
             <div class="p-4 pb-24 space-y-6">
+                <!-- 剧本设置部分 -->
                 <div class="space-y-2"><label class="text-xs font-bold text-[#ff9e64] uppercase tracking-wider">剧本标题</label><input type="text" id="input-title" class="custom-input w-full p-3 rounded-md text-sm font-bold" oninput="App.updateScriptData('title', this.value)"></div>
                 <div class="space-y-3"><div class="flex justify-between items-end"><label class="text-xs font-bold text-[#ff9e64] uppercase tracking-wider flex items-center gap-2"><i class="fa-solid fa-user"></i> 角色卡</label><label class="cursor-pointer bg-[#24283b]/80 hover:bg-[#2f334d] text-[10px] text-[#c0caf5] px-3 py-1.5 rounded border border-[#414868]/50 transition-colors flex items-center gap-1"><i class="fa-solid fa-upload"></i> 导入JSON<input type="file" id="file-char-import" class="hidden-file-input" onchange="App.handleFileImport(this, 'character')"></label></div><div class="bg-[#1f2335]/60 backdrop-blur-sm rounded-lg p-3 border border-[#292e42]/50"><div class="flex gap-3 mb-3"><label class="w-16 h-16 shrink-0 bg-[#1a1b26]/50 rounded-md relative overflow-hidden group cursor-pointer border border-[#414868]/50 hover:border-[#ff9e64]"><img id="img-char-avatar" class="w-full h-full object-cover hidden"><div id="ph-char-avatar" class="absolute inset-0 flex flex-col items-center justify-center text-[#565f89] group-hover:text-[#ff9e64]"><i class="fa-solid fa-camera text-sm"></i></div><input type="file" id="file-char-avatar" accept="image/*" class="hidden-file-input" onchange="App.handleImageUpload(this, 'charAvatar')"></label><div class="flex-1 flex flex-col justify-center gap-2"><input type="text" id="input-char-name" class="custom-input p-2 rounded text-sm w-full font-bold" placeholder="角色名称" oninput="App.updateScriptData('charName', this.value)"></div></div><div class="mt-3"><div class="flex justify-between mb-1"><p class="text-[10px] text-[#7a85b8]">人设描述</p><div class="flex gap-2"><button onclick="App.clearInput('input-char-desc')" class="text-[#565f89] hover:text-red-400 text-xs px-2 py-1"><i class="fa-solid fa-trash-can pointer-events-none"></i></button><button onclick="App.openFullscreen('input-char-desc', '人设描述')" class="text-[#565f89] hover:text-[#ff9e64] text-xs px-2 py-1"><i class="fa-solid fa-expand pointer-events-none"></i></button></div></div><textarea id="input-char-desc" class="custom-input w-full p-2 rounded text-xs leading-relaxed h-24 resize-none" oninput="App.updateScriptData('charDesc', this.value)"></textarea></div><div class="mt-3"><div class="flex justify-between mb-1"><p class="text-[10px] text-[#7a85b8]">开场白 (支持HTML)</p><div class="flex gap-2"><button onclick="App.clearInput('input-first-mes')" class="text-[#565f89] hover:text-red-400 text-xs px-2 py-1"><i class="fa-solid fa-trash-can pointer-events-none"></i></button><button onclick="App.openFullscreen('input-first-mes', '开场白')" class="text-[#565f89] hover:text-[#ff9e64] text-xs px-2 py-1"><i class="fa-solid fa-expand pointer-events-none"></i></button></div></div><textarea id="input-first-mes" class="custom-input w-full p-2 rounded text-xs leading-relaxed h-20 resize-none" oninput="App.updateScriptData('firstMes', this.value)"></textarea></div></div></div>
                 <div class="space-y-3"><div class="flex justify-between items-end"><label class="text-xs font-bold text-[#ff9e64] uppercase tracking-wider flex items-center gap-2"><i class="fa-solid fa-globe"></i> 世界观</label><label class="cursor-pointer bg-[#24283b]/80 hover:bg-[#2f334d] text-[10px] text-[#c0caf5] px-3 py-1.5 rounded border border-[#414868]/50 transition-colors flex items-center gap-1"><i class="fa-solid fa-file-import pointer-events-none"></i> 导入<input type="file" id="file-world-import" accept=".json,.txt" class="hidden-file-input" onchange="App.handleFileImport(this, 'world')"></label></div><div class="bg-[#1f2335]/60 backdrop-blur-sm rounded-lg p-3 border border-[#292e42]/50 space-y-3"><div><div class="flex justify-between mb-1"><p class="text-[10px] text-[#7a85b8]">世界背景</p><div class="flex gap-2"><button onclick="App.clearInput('input-world-scenario')" class="text-[#565f89] hover:text-red-400 text-xs px-2 py-1"><i class="fa-solid fa-trash-can pointer-events-none"></i></button><button onclick="App.openFullscreen('input-world-scenario', '世界背景')" class="text-[#565f89] hover:text-[#ff9e64] text-xs px-2 py-1"><i class="fa-solid fa-expand pointer-events-none"></i></button></div></div><textarea id="input-world-scenario" class="custom-input w-full p-2 rounded text-xs leading-relaxed h-24 resize-none font-mono text-[#9aa5ce]" oninput="App.updateScriptData('worldScenario', this.value)"></textarea></div></div></div>
@@ -443,7 +596,24 @@
                     </div>
                 </div>
 
-                <div class="relative"><div class="flex justify-between items-end mb-1 ml-1"><p class="text-[10px] text-[#7a85b8]">破限 (JAILBREAK)</p><div class="flex gap-2 items-center"><label class="cursor-pointer bg-[#24283b]/80 hover:bg-[#2f334d] text-[10px] text-[#c0caf5] px-2 py-0.5 rounded border border-[#414868]/50 transition-colors flex items-center gap-1 mr-2"><i class="fa-solid fa-folder-open pointer-events-none"></i> 批量导入<input type="file" id="file-preset-raw" multiple class="hidden-file-input" onchange="App.handleRawPresetUpload(this)"></label><button onclick="App.clearInput('input-jailbreak')" class="text-[#565f89] hover:text-red-400 text-xs px-2 py-1"><i class="fa-solid fa-trash-can pointer-events-none"></i></button><button onclick="App.openFullscreen('input-jailbreak', '破限设置')" class="text-[#565f89] hover:text-[#ff9e64] text-xs px-2 py-1"><i class="fa-solid fa-expand pointer-events-none"></i></button></div></div><textarea id="input-jailbreak" class="custom-input w-full p-2 rounded text-[10px] font-mono leading-relaxed h-32 resize-none text-[#73daca]" oninput="App.updateScriptData('jailbreak', this.value)"></textarea></div>
+                <!-- [V89] 其他补充模块 (文件列表模式) -->
+                <div class="space-y-2">
+                    <label class="text-xs font-bold text-[#7a85b8] uppercase tracking-wider">其他补充 (OTHERS)</label>
+                    <div id="jailbreak-file-list" class="file-list-container"></div>
+                    <div class="upload-zone" onclick="document.getElementById('file-jailbreak-upload').click()">
+                        <i class="fa-solid fa-cloud-arrow-up text-lg mb-1"></i><br>
+                        点击上传补充文件 (.txt/.json)
+                        <input type="file" id="file-jailbreak-upload" multiple class="hidden-file-input" onchange="App.handleJailbreakUpload(this)">
+                    </div>
+                </div>
+
+                <!-- 提示词装配车间 (手风琴UI) -->
+                <div class="pt-8 border-t border-[#292e42]/50 mt-8">
+                    <label class="text-xs font-bold text-[#9ece6a] uppercase tracking-wider flex items-center gap-2 mb-4"><i class="fa-solid fa-puzzle-piece"></i> 提示词装配车间 (PROMPT ASSEMBLY)</label>
+                    <div id="script-preset-config-area" class="space-y-2">
+                        <div class="text-center text-[#565f89] text-xs py-4">请先在「预设」标签页导入文件</div>
+                    </div>
+                </div>
 
                 <div class="pt-8 border-t border-[#292e42]/50 mt-8">
                     <label class="text-xs font-bold text-[#7aa2f7] uppercase tracking-wider flex items-center gap-2 mb-4"><i class="fa-solid fa-clock-rotate-left"></i> 时间线 (SAVES)</label>
@@ -457,6 +627,7 @@
 
     <!-- VIEW C: CHAT -->
     <div id="view-chat" class="view-container view-hidden fade-in relative">
+        <!-- 聊天界面同 V85 -->
         <div class="h-14 bg-[#1f2335]/70 backdrop-blur-md flex items-center justify-between px-4 border-b border-[#16161e]/30 shrink-0 shadow-sm relative z-50">
              <div class="flex items-center gap-3"><button onclick="App.backToSettings()" class="text-[#565f89] hover:text-[#ff9e64] flex items-center gap-2 transition-colors group"><i class="fa-solid fa-arrow-left text-lg"></i><span class="font-bold text-sm">設定</span></button></div>
              <div class="absolute left-1/2 transform -translate-x-1/2 text-center pointer-events-none"><h3 id="chat-title" class="font-bold text-[#c0caf5] text-sm shadow-black drop-shadow-md">...</h3><div class="flex items-center justify-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-green-500"></span><span class="text-[10px] text-[#7a85b8]">Online</span></div></div>
@@ -773,18 +944,18 @@
             currentIdentity: "YOU", editingPersonaId: null, 
             dataLoaded: false,
             phoneOpen: false,
+            globalPresets: [],
+            expandedPresetIndices: new Set(), // [V89] State Memory
 
             async init() {
+                // ... (Init code same as V85)
                 document.getElementById('phone-notification-sound').src = "data:audio/wav;base64,UklGRn4AAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YV4AAAAAAAABAAAAAQAAAAEAAAABAAEAAQABAAIAAgACAAIAAwADAAMAAwAEAAQABAAFAAUABQAFAAYABgAGAAcABwAHAAgACAAIAAkACQAJAAoACgAKAAoACwALAAwADAA="; 
-
                 const hitbox = document.getElementById('login-hitbox');
                 if(hitbox) {
                     const unlockFn = (e) => { e.preventDefault(); e.stopPropagation(); this.tryUnlock(); };
                     hitbox.addEventListener('click', unlockFn); hitbox.addEventListener('touchend', unlockFn);
                 }
-
                 MusicPlayer.init();
-
                 try { 
                     try { await AssetDB.init(); } catch(e) { console.warn("DB Fail", e); } 
                     const newData = await AssetDB.get('roleplay_saves_v50'); 
@@ -803,6 +974,8 @@
                              } catch(e) { console.error("Migration failed", e); }
                         }
                     }
+                    const gp = await AssetDB.get('global_presets');
+                    if(gp) this.globalPresets = gp;
                 } catch (e) { this.showToast("數據重置（救援模式）"); this.data = []; this.dataLoaded = true; }
                 
                 if (this.dataLoaded && this.data.length === 0) { this.createNewScript("默認劇本"); }
@@ -814,21 +987,360 @@
                 try { this.loadAppearanceSettings(); } catch(e){}
                 
                 this.renderScriptList(); 
+                this.renderPresetList();
                 this.switchTab('adventure'); 
                 document.getElementById('chat-container').addEventListener('click', (e) => { document.querySelectorAll('.message-group').forEach(el => el.classList.remove('active-touch')); const bubble = e.target.closest('.message-group'); if (bubble) bubble.classList.add('active-touch'); });
                 document.addEventListener('click', (e) => { if(!e.target.closest('#appearance-menu') && !e.target.closest('button[onclick="App.toggleAppearanceMenu()"]')) { document.getElementById('appearance-menu').classList.remove('show'); }});
                 this.updatePreviewThumb('bg_image', 'preview-bg'); this.updatePreviewThumb('cover_image', 'preview-cover'); this.updateAudioPreview();
                 this.showToast("SYSTEM READY");
-                
                 setInterval(() => {
                     const now = new Date();
                     document.getElementById('ios-clock').innerText = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
                 }, 1000);
             },
 
-            async saveToLocal() { if(!this.dataLoaded) { console.warn("Prevented overwrite: Data not loaded."); return; } try { await AssetDB.save('roleplay_saves_v50', this.data); } catch (e) { console.error(e); } },
-            async manualSave() { if(!this.dataLoaded) return alert("数据未加载，无法保存"); try { await AssetDB.save('roleplay_saves_v50', this.data); this.showToast("✅ 強制保存成功"); } catch(e) { this.showToast("❌ 保存失敗"); } },
-            
+            // ... (Standard functions)
+            async saveToLocal() { if(!this.dataLoaded) return; await AssetDB.save('roleplay_saves_v50', this.data); },
+            async manualSave() { await this.saveToLocal(); this.showToast("已保存"); },
+
+            // [V89] Jailbreak Logic - File List Mode
+            handleJailbreakUpload(input) {
+                const files = Array.from(input.files);
+                if (!files.length) return;
+                
+                const script = this.data.find(s => s.id === this.currentScriptId);
+                if (!script.jailbreakFiles) script.jailbreakFiles = [];
+
+                files.forEach(file => {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        script.jailbreakFiles.push({
+                            name: file.name,
+                            content: e.target.result,
+                            size: (file.size / 1024).toFixed(1) + 'kb'
+                        });
+                        this.saveToLocal();
+                        this.renderJailbreakFiles();
+                    };
+                    reader.readAsText(file);
+                });
+                input.value = '';
+            },
+
+            removeJailbreakFile(idx) {
+                const script = this.data.find(s => s.id === this.currentScriptId);
+                if(script && script.jailbreakFiles) {
+                    script.jailbreakFiles.splice(idx, 1);
+                    this.saveToLocal();
+                    this.renderJailbreakFiles();
+                }
+            },
+
+            renderJailbreakFiles() {
+                const script = this.data.find(s => s.id === this.currentScriptId);
+                const container = document.getElementById('jailbreak-file-list');
+                container.innerHTML = '';
+
+                // Handle legacy text content if exists
+                if (script.jailbreak && script.jailbreak.trim() !== "") {
+                    const legacyEl = document.createElement('div');
+                    legacyEl.className = "file-pill border-dashed border-[#7aa2f7]";
+                    legacyEl.innerHTML = `
+                        <div class="info">
+                            <i class="fa-solid fa-font"></i>
+                            <span class="name">旧版文本内容</span>
+                            <span class="size">${script.jailbreak.length} chars</span>
+                        </div>
+                        <i class="fa-solid fa-xmark del-btn" onclick="App.clearLegacyJailbreak()"></i>
+                    `;
+                    container.appendChild(legacyEl);
+                }
+
+                if (script.jailbreakFiles) {
+                    script.jailbreakFiles.forEach((file, idx) => {
+                        const el = document.createElement('div');
+                        el.className = "file-pill";
+                        el.innerHTML = `
+                            <div class="info">
+                                <i class="fa-solid fa-file-lines"></i>
+                                <span class="name">${file.name}</span>
+                                <span class="size">${file.size}</span>
+                            </div>
+                            <i class="fa-solid fa-xmark del-btn" onclick="App.removeJailbreakFile(${idx})"></i>
+                        `;
+                        container.appendChild(el);
+                    });
+                }
+            },
+
+            clearLegacyJailbreak() {
+                if(!confirm("确定清除旧版文本内容？")) return;
+                this.updateScriptData('jailbreak', "");
+                this.renderJailbreakFiles();
+            },
+
+            // [V87] Global Presets Logic
+            async handlePresetImport(input) {
+                const file = input.files[0];
+                if(!file) return;
+                const reader = new FileReader();
+                reader.onload = async (e) => {
+                    try {
+                        const json = JSON.parse(e.target.result);
+                        if (!json.prompts || !Array.isArray(json.prompts)) throw new Error("Invalid Format");
+                        
+                        const validPrompts = json.prompts.filter(p => {
+                            if (p.marker === true) return false;
+                            if (!p.content || p.content.trim() === "") return false;
+                            return true;
+                        });
+
+                        if (validPrompts.length === 0) {
+                            alert("未找到有效提示词（已过滤空白/标记项）");
+                            return;
+                        }
+
+                        const newPreset = {
+                            id: Date.now().toString(),
+                            name: file.name.replace('.json', ''),
+                            prompts: validPrompts.map(p => ({
+                                ...p,
+                                uuid: Math.random().toString(36).substr(2, 9),
+                                enabled_default: p.enabled
+                            }))
+                        };
+                        
+                        this.globalPresets.push(newPreset);
+                        await AssetDB.save('global_presets', this.globalPresets);
+                        this.renderPresetList();
+                        this.showToast(`导入成功: ${validPrompts.length} 条规则`);
+                    } catch(err) {
+                        alert("导入失败: " + err.message);
+                    }
+                };
+                reader.readAsText(file);
+                input.value = '';
+            },
+
+            renderPresetList() {
+                const container = document.getElementById('preset-list-container');
+                container.innerHTML = '';
+                if(this.globalPresets.length === 0) {
+                    container.innerHTML = '<div class="text-center text-[#565f89] text-xs py-10">暂无预设，请导入...</div>';
+                    return;
+                }
+                
+                this.globalPresets.forEach((preset, idx) => {
+                    const card = document.createElement('div');
+                    card.className = "preset-card";
+                    
+                    const header = document.createElement('div');
+                    header.className = "preset-card-header";
+                    header.innerHTML = `
+                        <div>
+                            <div class="preset-title">${preset.name}</div>
+                            <div class="preset-meta">${preset.prompts.length} 条规则</div>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <button onclick="event.stopPropagation(); App.deletePreset(${idx})" class="text-[#565f89] hover:text-red-400"><i class="fa-solid fa-trash-can"></i></button>
+                            <i class="fa-solid fa-chevron-down text-[#565f89] text-xs"></i>
+                        </div>
+                    `;
+                    
+                    const body = document.createElement('div');
+                    body.className = "preset-body";
+                    
+                    preset.prompts.forEach(p => {
+                        const item = document.createElement('div');
+                        item.className = "prompt-item";
+                        
+                        const roleLabel = (p.role === 1 || p.role === 'user') ? 'User' : 'System';
+                        const roleClass = roleLabel === 'System' ? 'sys-tag' : 'usr-tag';
+
+                        item.innerHTML = `
+                            <div class="prompt-main" onclick="App.viewContent('${encodeURIComponent(p.content)}', '${p.name}', false)">
+                                <span class="prompt-name">${p.name}</span>
+                                <div class="tag-row">
+                                    <span class="${roleClass}">${roleLabel}</span>
+                                    ${p.injection_depth ? `<span class="depth-tag">D:${p.injection_depth}</span>` : ''}
+                                </div>
+                            </div>
+                        `;
+                        body.appendChild(item);
+                    });
+
+                    header.onclick = () => {
+                        body.classList.toggle('expanded');
+                        header.querySelector('.fa-chevron-down').classList.toggle('rotate-180');
+                    };
+
+                    card.appendChild(header);
+                    card.appendChild(body);
+                    container.appendChild(card);
+                });
+            },
+
+            async deletePreset(idx) {
+                if(!confirm("确定删除此预设包？")) return;
+                this.globalPresets.splice(idx, 1);
+                await AssetDB.save('global_presets', this.globalPresets);
+                this.renderPresetList();
+            },
+
+            // [V89] Render Script Config (With State Memory)
+            renderScriptPresetConfig() {
+                const container = document.getElementById('script-preset-config-area');
+                container.innerHTML = '';
+                
+                if(this.globalPresets.length === 0) {
+                    container.innerHTML = '<div class="text-center text-[#565f89] text-xs py-4">请先在「预设」标签页导入文件</div>';
+                    return;
+                }
+
+                const script = this.data.find(s => s.id === this.currentScriptId);
+                if(!script.active_hooks) script.active_hooks = {};
+                if(!script.content_overrides) script.content_overrides = {};
+
+                this.globalPresets.forEach((preset, pIdx) => {
+                    const card = document.createElement('div');
+                    card.className = "preset-card";
+                    
+                    let activeCount = 0;
+                    preset.prompts.forEach(p => {
+                        const isActive = script.active_hooks[p.uuid] !== undefined ? script.active_hooks[p.uuid] : p.enabled_default;
+                        if(isActive) activeCount++;
+                    });
+
+                    const header = document.createElement('div');
+                    header.className = "preset-card-header";
+                    header.innerHTML = `
+                        <div class="flex items-center gap-2">
+                            <div class="toggle-all-btn" onclick="event.stopPropagation(); App.toggleAllInPreset(${pIdx})">
+                                <i class="fa-solid fa-check-double"></i>
+                            </div>
+                            <div>
+                                <div class="preset-title">${preset.name}</div>
+                                <div class="preset-meta text-[#9ece6a]">已开启 ${activeCount}/${preset.prompts.length}</div>
+                            </div>
+                        </div>
+                        <i class="fa-solid fa-chevron-down text-[#565f89] text-xs"></i>
+                    `;
+
+                    const body = document.createElement('div');
+                    body.className = "preset-body";
+                    
+                    // [V89] Restore expanded state
+                    if (this.expandedPresetIndices.has(pIdx)) {
+                        body.classList.add('expanded');
+                    }
+
+                    preset.prompts.forEach(p => {
+                        const isActive = script.active_hooks[p.uuid] !== undefined ? script.active_hooks[p.uuid] : p.enabled_default;
+                        const hasOverride = script.content_overrides[p.uuid] !== undefined;
+                        
+                        const roleLabel = (p.role === 1 || p.role === 'user') ? 'User' : 'System';
+                        const roleClass = roleLabel === 'System' ? 'sys-tag' : 'usr-tag';
+
+                        const item = document.createElement('div');
+                        item.className = "prompt-item";
+                        item.innerHTML = `
+                            <div class="prompt-main" onclick="App.viewContent('${encodeURIComponent(hasOverride ? script.content_overrides[p.uuid] : p.content)}', '${p.name}', true, '${p.uuid}')">
+                                <span class="prompt-name ${hasOverride ? 'text-[#ff9e64]' : ''}">${p.name} ${hasOverride ? '*' : ''}</span>
+                                <div class="tag-row">
+                                    <span class="${roleClass}">${roleLabel}</span>
+                                    ${p.injection_depth ? `<span class="depth-tag">D:${p.injection_depth}</span>` : ''}
+                                </div>
+                            </div>
+                            <div class="flex items-center">
+                                <button class="action-btn" onclick="event.stopPropagation(); App.viewContent('${encodeURIComponent(hasOverride ? script.content_overrides[p.uuid] : p.content)}', '${p.name}', true, '${p.uuid}')">
+                                    <i class="fa-solid fa-pen"></i>
+                                </button>
+                                <div class="switch-wrapper" onclick="event.stopPropagation()">
+                                    <label class="switch-sm">
+                                        <input type="checkbox" ${isActive ? 'checked' : ''} onchange="App.togglePresetHook('${p.uuid}', this.checked)">
+                                        <span class="slider-sm"></span>
+                                    </label>
+                                </div>
+                            </div>
+                        `;
+                        body.appendChild(item);
+                    });
+
+                    // [V89] Toggle logic with state saving
+                    header.onclick = () => {
+                        if (body.classList.contains('expanded')) {
+                            body.classList.remove('expanded');
+                            this.expandedPresetIndices.delete(pIdx);
+                        } else {
+                            body.classList.add('expanded');
+                            this.expandedPresetIndices.add(pIdx);
+                        }
+                    };
+
+                    card.appendChild(header);
+                    card.appendChild(body);
+                    container.appendChild(card);
+                });
+            },
+
+            toggleAllInPreset(pIdx) {
+                const preset = this.globalPresets[pIdx];
+                const script = this.data.find(s => s.id === this.currentScriptId);
+                if(!script.active_hooks) script.active_hooks = {};
+
+                let allOn = true;
+                preset.prompts.forEach(p => {
+                    const isActive = script.active_hooks[p.uuid] !== undefined ? script.active_hooks[p.uuid] : p.enabled_default;
+                    if(!isActive) allOn = false;
+                });
+                
+                const targetState = !allOn;
+                
+                preset.prompts.forEach(p => {
+                    script.active_hooks[p.uuid] = targetState;
+                });
+                
+                this.saveToLocal();
+                this.renderScriptPresetConfig();
+            },
+
+            togglePresetHook(uuid, checked) {
+                const script = this.data.find(s => s.id === this.currentScriptId);
+                if(!script.active_hooks) script.active_hooks = {};
+                script.active_hooks[uuid] = checked;
+                this.saveToLocal();
+                this.renderScriptPresetConfig(); 
+            },
+
+            viewContent(encodedContent, title, editable, uuid) {
+                const content = decodeURIComponent(encodedContent);
+                document.getElementById('content-modal-title').innerText = title;
+                const textarea = document.getElementById('content-modal-textarea');
+                textarea.value = content;
+                textarea.readOnly = !editable;
+                
+                const saveBtn = document.getElementById('content-modal-save-btn');
+                if(editable) {
+                    saveBtn.classList.remove('hidden');
+                    saveBtn.onclick = () => App.saveContentOverride(uuid, textarea.value);
+                } else {
+                    saveBtn.classList.add('hidden');
+                }
+                
+                document.getElementById('content-modal').classList.add('show');
+            },
+
+            saveContentOverride(uuid, newContent) {
+                const script = this.data.find(s => s.id === this.currentScriptId);
+                if(!script.content_overrides) script.content_overrides = {};
+                script.content_overrides[uuid] = newContent;
+                this.saveToLocal();
+                document.getElementById('content-modal').classList.remove('show');
+                this.renderScriptPresetConfig();
+                this.showToast("规则已覆写");
+            },
+
+            // ... (Rest of App functions: saveSystemSettings, loadSystemSettings, updateBgOpacity, updateLockIcon, createNewScript, updateScriptData, etc. SAME AS V86)
             saveSystemSettings() {
                 const s = JSON.parse(localStorage.getItem('roleplay_api_settings')) || {};
                 s.url = document.getElementById('input-api-url').value; s.key = document.getElementById('input-api-key').value; s.model = document.getElementById('select-model').value; s.temp = document.getElementById('input-temp').value; s.tokens = document.getElementById('input-tokens').value; s.context = document.getElementById('input-context').value; s.welcomeText = document.getElementById('input-welcome-text').value; s.passcode = document.getElementById('input-passcode').value; s.theatreMode = document.getElementById('theatre-mode-toggle').checked; s.bgOpacity = document.getElementById('input-bg-opacity').value;
@@ -853,7 +1365,7 @@
             updateLockIcon() { const p = document.getElementById('input-passcode').value; const icon = document.getElementById('lock-status'); if(p && p.length === 4) { icon.className = "fa-solid fa-lock text-[10px] ml-2 text-green-400"; } else { icon.className = "fa-solid fa-unlock text-[10px] ml-2 text-gray-500"; } },
 
             createNewScript(t = "新剧本") { 
-                const n = { id: Date.now().toString() + Math.random().toString().slice(2,5), title: t, charName: "", charDesc: "", firstMes: "你好，旅行者。", worldScenario: "", jailbreak: "", charAvatar: "", personas: [{ id: 'p-'+Date.now(), name: "默認", desc: "普通玩家", avatar: "" }], saves: [] }; 
+                const n = { id: Date.now().toString() + Math.random().toString().slice(2,5), title: t, charName: "", charDesc: "", firstMes: "你好，旅行者。", worldScenario: "", jailbreak: "", charAvatar: "", personas: [{ id: 'p-'+Date.now(), name: "默認", desc: "普通玩家", avatar: "" }], saves: [], active_hooks: {}, content_overrides: {} }; 
                 if(!this.data) this.data = []; this.data.push(n); this.saveToLocal(); this.currentScriptId = n.id; this.loadScriptSettings(n.id); 
                 if(t !== "默認劇本" && t !== "緊急恢復劇本") { this.enterSettings(); setTimeout(() => document.getElementById('input-title').focus(), 100); this.showToast("新剧本已创建"); }
             },
@@ -864,8 +1376,13 @@
             loadScriptSettings_Internal(id) {
                 const script = this.data.find(s => s.id === id); if (!script) return;
                 if (!script.personas || !Array.isArray(script.personas)) { script.personas = [{ id: 'p-'+Date.now(), name: "默認", desc: script.userPersona || "", avatar: script.userAvatar || "" }]; }
-                ['title', 'charName', 'charDesc', 'firstMes', 'worldScenario', 'jailbreak'].forEach(key => { const el = document.getElementById(`input-${key.replace(/[A-Z]/g, m => "-" + m.toLowerCase())}`); if(el) el.value = script[key] || ""; }); 
+                ['title', 'charName', 'charDesc', 'firstMes', 'worldScenario'].forEach(key => { 
+                    const el = document.getElementById(`input-${key.replace(/[A-Z]/g, m => "-" + m.toLowerCase())}`); 
+                    if(el) el.value = script[key] || ""; 
+                }); 
                 this.renderAvatar('char', script.charAvatar); this.renderPersonaList();
+                this.renderScriptPresetConfig(); 
+                this.renderJailbreakFiles(); // [V89]
             },
 
             renderPersonaList() {
@@ -919,6 +1436,7 @@ this.renderSaveList(); this.showToast("時間線已抹除"); },
                 document.getElementById('view-chat').classList.add('view-hidden'); 
                 document.getElementById('view-settings').classList.remove('view-hidden'); 
                 this.renderSaveList(); 
+                this.renderScriptPresetConfig();
             },
             enterDashboard() { 
                 this.closePhone();
@@ -944,9 +1462,10 @@ this.renderSaveList(); this.showToast("時間線已抹除"); },
             renderScriptList() { const l = document.getElementById('script-list'); l.innerHTML = ''; if(!this.data) return; this.data.forEach(script => { const el = document.createElement('div'); el.className = `bg-[#1f2335]/60 backdrop-blur-sm border border-[#292e42]/50 rounded-lg p-3 cursor-pointer relative group hover:border-[#414868] transition-all`; el.onclick = () => { this.currentScriptId = script.id; this.loadScriptSettings(script.id); this.enterSettings(); }; el.innerHTML = `<div class="flex justify-between items-center"><div class="flex-1"><h3 class="font-bold text-[#c0caf5] text-sm mb-1">${script.title || '未命名劇本'}</h3><p class="text-xs text-[#565f89]">${script.charName || '未知角色'} · ${script.saves ? script.saves.length : 0} 個輪迴</p></div><div class="flex items-center gap-2"><i class="fa-solid fa-chevron-right text-[#565f89]"></i></div><button onclick="event.stopPropagation(); App.deleteScript('${script.id}')" class="absolute right-2 top-2 text-[#565f89] hover:text-red-400 p-2 hidden group-hover:block"><i class="fa-solid fa-trash-can pointer-events-none"></i></button></div>`; l.appendChild(el); }); },
             renderSaveList() { const l = document.getElementById('save-list'); l.innerHTML = ''; const script = this.data.find(s => s.id === this.currentScriptId); if (!script) return; if (!script.saves || script.saves.length === 0) { l.innerHTML = `<div class="text-center text-[#565f89] text-xs py-4">暂无时间线记录</div>`; return; } script.saves.forEach(save => { const el = document.createElement('div'); let personaName = "未知身份"; if (script.personas) { const p = script.personas.find(x => x.id === save.personaId); if (p) personaName = p.name; else if (!save.personaId && script.personas.length > 0) personaName = script.personas[0].name; } const lastMsg = save.chatHistory.length > 0 ? save.chatHistory[save.chatHistory.length-1].content.substring(0, 30) + "..." : "（新開局）"; const date = new Date(save.timestamp).toLocaleString(); el.className = `bg-[#16161e]/60 backdrop-blur-sm border border-[#2f334d]/50 rounded p-2 flex justify-between items-center hover:bg-[#1a1b26]/80 group`; el.innerHTML = `<div class="flex-1 cursor-pointer" onclick="App.enterChat('${save.id}')"><div class="flex items-center gap-2"><span class="text-[#c0caf5] text-xs font-bold">${save.title}</span><span class="text-[9px] px-1.5 rounded bg-[#3b4261] text-[#7aa2f7]">${personaName}</span></div><div class="text-[10px] text-[#787c99] mt-1 truncate pr-4">${lastMsg}</div></div><div class="flex gap-2"><button onclick="App.renameSave('${save.id}')" class="text-[#565f89] hover:text-[#ff9e64] p-2" title="重命名"><i class="fa-solid fa-pen"></i></button><button onclick="App.deleteSave('${save.id}')" class="text-[#565f89] hover:text-red-400 p-2" title="刪除"><i class="fa-solid fa-trash-can"></i></button></div>`; l.appendChild(el); }); },
             loadScriptSettings(id) { this.loadScriptSettings_Internal(id); },
-            loadScriptSettings_Internal(id) { const script = this.data.find(s => s.id === id); if (!script) return; if (!script.personas || !Array.isArray(script.personas)) { script.personas = [{ id: 'p-'+Date.now(), name: "默認", desc: script.userPersona || "", avatar: script.userAvatar || "" }]; } ['title', 'charName', 'charDesc', 'firstMes', 'worldScenario', 'jailbreak'].forEach(key => { const el = document.getElementById(`input-${key.replace(/[A-Z]/g, m => "-" + m.toLowerCase())}`); if(el) el.value = script[key] || ""; }); this.renderAvatar('char', script.charAvatar); this.renderPersonaList(); },
+            loadScriptSettings_Internal(id) { const script = this.data.find(s => s.id === id); if (!script) return; if (!script.personas || !Array.isArray(script.personas)) { script.personas = [{ id: 'p-'+Date.now(), name: "默認", desc: script.userPersona || "", avatar: script.userAvatar || "" }]; } ['title', 'charName', 'charDesc', 'firstMes', 'worldScenario'].forEach(key => { const el = document.getElementById(`input-${key.replace(/[A-Z]/g, m => "-" + m.toLowerCase())}`); if(el) el.value = script[key] || ""; }); this.renderAvatar('char', script.charAvatar); this.renderPersonaList(); },
             renameIdentity() { const newName = prompt("设置当前发言身份（例如：旁白、系统、神秘人）：", this.currentIdentity); if (newName && newName.trim() !== "") { this.currentIdentity = newName.trim(); document.getElementById('input-name-display').innerText = this.currentIdentity; } },
 
+            // [V89] 智能装配 (Updated for Jailbreak Files)
             async generateAIResponse(triggerSource = 'main') { 
                 const script = this.data.find(s => s.id === this.currentScriptId); 
                 const save = script.saves.find(s => s.id === this.currentSaveId); 
@@ -957,43 +1476,112 @@ this.renderSaveList(); this.showToast("時間線已抹除"); },
 
                 let activePersona = null; 
                 if (script.personas) { activePersona = script.personas.find(p => p.id === save.personaId); } 
+                const userName = activePersona ? activePersona.name : "User";
                 const userDesc = activePersona ? activePersona.desc : (script.userPersona || ""); 
                 
-                let sysPrompt = [`[Character: ${script.charName}]`, `[Description: ${script.charDesc}]`, `[Scenario: ${script.worldScenario}]`, `[User: ${userDesc}]`, script.jailbreak].join('\n\n'); 
+                // Collect Enabled Presets
+                let enabledPrompts = [];
+                if(script.active_hooks) {
+                    this.globalPresets.forEach(gp => {
+                        gp.prompts.forEach(p => {
+                            const isActive = script.active_hooks[p.uuid] !== undefined ? script.active_hooks[p.uuid] : p.enabled_default;
+                            if(isActive) enabledPrompts.push(p);
+                        });
+                    });
+                }
+                enabledPrompts.sort((a, b) => (a.injection_order || 0) - (b.injection_order || 0));
+
+                // Assemble System Prompt
+                let sysPromptParts = [];
+                sysPromptParts.push(`[Character: ${script.charName}]`);
+                sysPromptParts.push(`[Description: ${script.charDesc}]`);
+                sysPromptParts.push(`[Scenario: ${script.worldScenario}]`);
+                sysPromptParts.push(`[User: ${userDesc}]`);
                 
-                sysPrompt += `\n\n[SYSTEM: MOBILE PHONE INTERACTION PROTOCOL]
+                enabledPrompts.forEach(p => {
+                    if(p.role === 'system') {
+                        const rawContent = (script.content_overrides && script.content_overrides[p.uuid]) ? script.content_overrides[p.uuid] : p.content;
+                        let content = rawContent.replace(/{{user}}/g, userName).replace(/{{char}}/g, script.charName);
+                        sysPromptParts.push(content);
+                    }
+                });
+                
+                // [V89] Append Jailbreak Files
+                if(script.jailbreak && script.jailbreak.trim() !== "") {
+                    sysPromptParts.push(script.jailbreak);
+                }
+                if(script.jailbreakFiles && script.jailbreakFiles.length > 0) {
+                    script.jailbreakFiles.forEach(file => {
+                        sysPromptParts.push(`\n[FILE: ${file.name}]\n${file.content}`);
+                    });
+                }
+
+                sysPromptParts.push(`\n[SYSTEM: MOBILE PHONE INTERACTION PROTOCOL]
                 1. The User has a mobile phone. You (Character) have a mobile phone.
                 2. IF you want to send a text message (SMS/WeChat) to the User, you MUST enclose the message content in <sms> tags.
-                3. You can send MULTIPLE messages in a row by using multiple tags.
-                   Example: <sms>Where are you?</sms><sms>I am worried.</sms>
-                4. You can mix Narrative Action and SMS.
-                   Example: "He picked up his phone, hesitating." <sms>I'm sorry.</sms> "He put the phone down."
-                5. If the User sent you an SMS (marked as [SMS from User]), you should generally reply via <sms> tags, unless the plot dictates you ignore it or call them.
-                6. Be strictly immersive. If you are angry, send short, cold texts. If happy, use emojis.`;
+                3. You can send MULTIPLE messages in a row.
+                4. Be strictly immersive.`);
+
+                let sysPrompt = sysPromptParts.join('\n\n');
 
                 let hist = []; 
                 let isGemini = s.url.includes('googleapis'); 
                 const contextLimit = parseInt(s.context) || 20; 
                 
+                // Assemble User Presets
+                let preHistoryInstruct = [];
+                let postHistoryInstruct = [];
+
+                enabledPrompts.forEach(p => {
+                    if(p.role === 'user') {
+                        const rawContent = (script.content_overrides && script.content_overrides[p.uuid]) ? script.content_overrides[p.uuid] : p.content;
+                        let content = rawContent.replace(/{{user}}/g, userName).replace(/{{char}}/g, script.charName);
+                        if(p.injection_depth && p.injection_depth > 2) {
+                            preHistoryInstruct.push(content);
+                        } else {
+                            postHistoryInstruct.push(content);
+                        }
+                    }
+                });
+
+                // Construct History
+                if (isGemini) { 
+                    if(script.firstMes) hist.push({ role: 'model', parts: [{ text: script.firstMes }] });
+                    if(preHistoryInstruct.length > 0) {
+                        hist.push({ role: 'user', parts: [{ text: preHistoryInstruct.join('\n\n') }] });
+                        hist.push({ role: 'model', parts: [{ text: "Understood." }] }); 
+                    }
+                } else { 
+                    hist.push({ role: "system", content: sysPrompt }); 
+                    if(preHistoryInstruct.length > 0) {
+                        hist.push({ role: "system", content: preHistoryInstruct.join('\n\n') }); 
+                    }
+                    if(script.firstMes) hist.push({ role: "assistant", content: script.firstMes }); 
+                } 
+
                 const recentHistory = save.chatHistory.slice(-contextLimit).map(msg => {
                     let content = msg.content;
-                    if (msg.role === 'user' && msg.isPhone) {
-                        content = `[SMS from User]: ${content}`;
-                    }
-                    else if (msg.role === 'user') {
-                        content = `${msg.customName || 'User'}: ${content}`;
-                    }
+                    if (msg.role === 'user' && msg.isPhone) content = `[SMS from User]: ${content}`;
+                    else if (msg.role === 'user') content = `${msg.customName || 'User'}: ${content}`;
                     return { role: msg.role === 'user' ? 'user' : (isGemini ? 'model' : 'assistant'), content: content };
                 });
 
-                if (isGemini) { 
-                    if(script.firstMes) hist.push({ role: 'model', parts: [{ text: script.firstMes }] }); 
-                    recentHistory.forEach(m => hist.push({ role: m.role, parts: [{ text: m.content }] })); 
-                } else { 
-                    hist.push({ role: "system", content: sysPrompt }); 
-                    if(script.firstMes) hist.push({ role: "assistant", content: script.firstMes }); 
-                    recentHistory.forEach(m => hist.push({ role: m.role, content: m.content })); 
-                } 
+                if(isGemini) {
+                    recentHistory.forEach(m => hist.push({ role: m.role, parts: [{ text: m.content }] }));
+                } else {
+                    recentHistory.forEach(m => hist.push({ role: m.role, content: m.content }));
+                }
+
+                if(postHistoryInstruct.length > 0) {
+                    const lastMsg = hist[hist.length - 1];
+                    if(lastMsg && lastMsg.role === 'user') {
+                        if(isGemini) lastMsg.parts[0].text += "\n\n[Instruction]: " + postHistoryInstruct.join('\n');
+                        else lastMsg.content += "\n\n[Instruction]: " + postHistoryInstruct.join('\n');
+                    } else {
+                        if(isGemini) hist.push({ role: 'user', parts: [{ text: "[System Note]: " + postHistoryInstruct.join('\n') }] });
+                        else hist.push({ role: "system", content: postHistoryInstruct.join('\n') });
+                    }
+                }
 
                 const c = document.getElementById('chat-container'); 
                 const tid = 'thinking-' + Date.now(); 
@@ -1132,7 +1720,7 @@ this.renderSaveList(); this.showToast("時間線已抹除"); },
                 save.chatHistory.push({ 
                     role: 'user', 
                     content: t, 
-                    timestamp: Date.now(),
+                    timestamp: Date.now(), 
                     isPhone: true 
                 });
 
@@ -1255,48 +1843,26 @@ this.renderSaveList(); this.showToast("時間線已抹除"); },
             openFullscreen(id, t) { this.fsTargetId = id; document.getElementById('fs-textarea').value = document.getElementById(id).value; document.getElementById('fs-title').innerText = "正在编辑: " + t; document.getElementById('fullscreen-editor').style.display = 'flex'; document.getElementById('fs-textarea').oninput = (e) => { document.getElementById(this.fsTargetId).value = e.target.value; document.getElementById(this.fsTargetId).dispatchEvent(new Event('input')); }; },
             closeFullscreen() { document.getElementById('fullscreen-editor').style.display = 'none'; this.fsTargetId = null; if (this.editMsgIndex !== null) { const script = this.data.find(s => s.id === this.currentScriptId); const save = script.saves.find(s => s.id === this.currentSaveId); if (script && save) { const n = document.getElementById('fs-textarea').value; if (this.editMsgIndex === -1) { script.firstMes = n; const el = document.getElementById('input-first-mes'); if(el) el.value = n; } else { save.chatHistory[this.editMsgIndex].content = n; } this.saveToLocal(); this.renderChat(); } this.editMsgIndex = null; } },
             
-            // [V84 FIX] 完美交互與樣式隔離：全局腳本注入 + CSS命名空間綁定
+            // [V84 FIX] 
             activateInteractiveContent(container) {
                 if (!container) return;
-                const uniqueId = container.id; // 例如 msg-5-card
-
-                // A. CSS 處理：將 body/html 替換為該容器 ID，確保樣式只在沙盒內生效
+                const uniqueId = container.id; 
                 const styles = container.querySelectorAll('style');
                 styles.forEach(oldStyle => {
                     let css = oldStyle.innerHTML;
-                    // 正則替換：將 body 或 html 選擇器替換為 #msg-xxx-card
                     css = css.replace(/(body|html)(?![a-zA-Z0-9-_])/gi, `#${uniqueId}`); 
                     oldStyle.innerHTML = css;
                 });
-
-                // B. JS 處理：提取腳本並注入到全局，確保 onclick 可用
                 const scripts = container.querySelectorAll('script');
                 scripts.forEach(oldScript => {
-                    // 創建新腳本標籤
                     const newScript = document.createElement('script');
-                    // 複製所有屬性（如 src, type）
                     Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
-                    
-                    // 關鍵修復：直接將腳本內容注入到 body，使其在全局作用域執行
-                    // 這樣 onclick="func()" 就能找到 func 了
-                    // 使用 try-catch 防止報錯卡死
-                    newScript.textContent = `
-                        try {
-                            ${oldScript.textContent}
-                        } catch(e) {
-                            console.error('Interactive Script Error in ${uniqueId}:', e);
-                        }
-                    `;
-                    
-                    // 注入到 document.body 而不是 container，確保全局執行
+                    newScript.textContent = `try { ${oldScript.textContent} } catch(e) { console.error('Interactive Script Error in ${uniqueId}:', e); }`;
                     document.body.appendChild(newScript);
-                    
-                    // 可選：移除舊的 script 標籤保持 DOM 整潔
-                    // oldScript.remove();
                 });
             },
 
-            // [V84 FIX] 恢復 V79 氣泡結構，並嵌入 V81 的代碼分離邏輯
+            // [V84 FIX]
             appendChatBubble(text, role, idx, timestamp = Date.now(), customName = null) { 
                 const script = this.data.find(s => s.id === this.currentScriptId); 
                 const save = script.saves.find(s => s.id === this.currentSaveId); 
@@ -1321,11 +1887,9 @@ this.renderSaveList(); this.showToast("時間線已抹除"); },
                 const date = new Date(timestamp); 
                 const timeStr = `${date.getHours().toString().padStart(2,'0')}:${date.getMinutes().toString().padStart(2,'0')}`; 
                 
-                // [V84] 解析文本和代碼塊
                 let narrativeContent = text;
                 let cardContent = "";
                 
-                // 嘗試匹配 Markdown 代碼塊
                 const codeBlockRegex = /```html([\s\S]*?)```/;
                 const match = text.match(codeBlockRegex);
                 
@@ -1333,8 +1897,6 @@ this.renderSaveList(); this.showToast("時間線已抹除"); },
                     cardContent = match[1];
                     narrativeContent = text.replace(match[0], '').trim();
                 } else if (text.includes('<div') && text.includes('<style>')) {
-                    // 如果沒有代碼塊但包含 HTML 標籤，嘗試當作全 HTML 處理
-                    // 這種情況下通常沒有純文本旁白
                     cardContent = text;
                     narrativeContent = "";
                 }
@@ -1345,7 +1907,6 @@ this.renderSaveList(); this.showToast("時間線已抹除"); },
                     const bubbleColor = "bg-[#3d59a1]/80 backdrop-blur-md text-white"; 
                     html = `<div class="flex flex-row-reverse gap-3 group message-group animate-fade-in-up relative mb-4" id="msg-${idx}"><img src="${avatar}" class="w-8 h-8 rounded-full mt-1 shrink-0 object-cover bg-[#1a1b26]/50 border border-[#2f334d]/50"><div class="flex flex-col gap-1 max-w-[85%] items-end relative"><div class="flex items-center gap-2"><span class="text-[10px] text-[#7aa2f7] font-bold">${name}</span><div class="msg-actions relative flex gap-3 mr-2"><button onclick="App.editMessage(${idx})" class="text-sm text-gray-500 hover:text-[#ff9e64] transition-colors cursor-pointer"><i class="fa-solid fa-pencil"></i></button>${idx !== -1 ? `<button onclick="App.deleteMessage(${idx})" class="text-sm text-gray-500 hover:text-red-400 transition-colors cursor-pointer"><i class="fa-solid fa-trash-can"></i></button>` : ''}</div></div><div class="${bubbleColor} p-2 px-3 text-sm rounded-l-xl rounded-br-xl shadow-sm relative z-10 w-fit"><div class="whitespace-pre-wrap break-words">${narrativeContent}</div><span class="float-right text-[9px] opacity-50 ml-2 mt-1 select-none font-mono tracking-tighter">${timeStr}</span></div></div></div>`; 
                 } else { 
-                    // [V84] AI 消息佈局：純文本 (V79樣式) + 沙盒卡片 (V81功能)
                     html = `
                     <div class="flex flex-col gap-2 group message-group animate-fade-in-up relative mb-6 w-full items-center" id="msg-${idx}">
                         <div class="flex items-center justify-between w-full px-1">
@@ -1358,20 +1919,14 @@ this.renderSaveList(); this.showToast("時間線已抹除"); },
                                 ${idx !== -1 ? `<button onclick="App.deleteMessage(${idx})" class="text-xs text-gray-500 hover:text-red-400"><i class="fa-solid fa-trash-can"></i></button>` : ''}
                             </div>
                         </div>
-                        
-                        <!-- 區域 A：純文本旁白 (V79 樣式) -->
                         ${narrativeContent ? `<div class="ai-content-area dynamic-text">${narrativeContent}</div>` : ''}
-                        
-                        <!-- 區域 B：互動小劇場沙盒 (隔離樣式 & 全局腳本) -->
                         ${cardContent ? `<div id="msg-${idx}-card" class="sandbox-root">${cardContent}</div>` : ''}
-                        
                         <div class="text-[9px] text-[#565f89] font-mono opacity-30 self-end mr-2">${timeStr}</div>
                     </div>`; 
                 }
                 
                 document.getElementById('chat-container').insertAdjacentHTML('beforeend', html); 
 
-                // 如果有卡片內容，激活其中的腳本與樣式
                 if (!isUser && cardContent) {
                     const cardContainer = document.getElementById(`msg-${idx}-card`);
                     if(cardContainer) {
@@ -1415,10 +1970,10 @@ this.renderSaveList(); this.showToast("時間線已抹除"); },
                     this.showToast("已加载通用模型列表"); select.value = fallback[0]; this.saveSystemSettings(); 
                 } 
             },
-            switchTab(t) { document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active')); document.getElementById(`nav-${t}`).classList.add('active'); ['adventure', 'system'].forEach(p => { const el = document.getElementById(`page-${p}`); if(el) el.style.display = (p === t) ? 'block' : 'none'; }); },
+            switchTab(t) { document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active')); document.getElementById(`nav-${t}`).classList.add('active'); ['adventure', 'system', 'presets'].forEach(p => { const el = document.getElementById(`page-${p}`); if(el) el.style.display = (p === t) ? 'block' : 'none'; }); },
 
         };
         window.onload = () => App.init();
     </script>
 </body>
-</html>
+</html
