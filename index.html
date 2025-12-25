@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>控制台 (SETTINGS) - 黎梨 V89 状态记忆版</title>
+    <title>控制台 (SETTINGS) - 黎梨 V91 稳定核心版</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&family=Noto+Serif+SC:wght@400;600;700&display=swap" rel="stylesheet">
@@ -55,7 +55,7 @@
             color: initial;
             border-radius: 8px;
             overflow: hidden;
-            transition: all 0.3s ease;
+            transition: opacity 0.3s ease; /* 简化动画以提升性能 */
         }
         .sandbox-root img { max-width: 100%; height: auto; }
 
@@ -66,7 +66,7 @@
             border-radius: 8px;
             margin-bottom: 10px;
             overflow: hidden;
-            transition: all 0.2s;
+            /* 移除复杂的 transition 以提升长列表性能 */
         }
         .preset-card-header {
             padding: 12px;
@@ -85,13 +85,8 @@
             background: rgba(0, 0, 0, 0.2);
             border-top: 1px solid var(--border-color);
         }
-        .preset-body.expanded { display: block; animation: slideDown 0.2s ease-out; }
+        .preset-body.expanded { display: block; }
         
-        @keyframes slideDown {
-            from { opacity: 0; transform: translateY(-5px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
         .prompt-item {
             padding: 10px 12px;
             border-bottom: 1px solid rgba(255, 255, 255, 0.03);
@@ -136,7 +131,7 @@
         }
         .toggle-all-btn:hover { background: rgba(122, 162, 247, 0.2); }
 
-        /* [V89] 破限文件列表样式 */
+        /* 其他补充模块 */
         .file-list-container {
             display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px;
         }
@@ -596,7 +591,7 @@
                     </div>
                 </div>
 
-                <!-- [V89] 其他补充模块 (文件列表模式) -->
+                <!-- [V91] 强制注入防崩坏 & 其他补充 -->
                 <div class="space-y-2">
                     <label class="text-xs font-bold text-[#7a85b8] uppercase tracking-wider">其他补充 (OTHERS)</label>
                     <div id="jailbreak-file-list" class="file-list-container"></div>
