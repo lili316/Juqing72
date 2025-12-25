@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>控制台 (SETTINGS) - 黎梨 V91 稳定核心版</title>
+    <title>控制台 (SETTINGS) - 黎梨 V92 性能核心版</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&family=Noto+Serif+SC:wght@400;600;700&display=swap" rel="stylesheet">
@@ -42,7 +42,7 @@
             text-align: left; 
         }
 
-        /* 小剧场沙盒容器 */
+        /* [V92] 小剧场沙盒容器 - 样式重置与隔离 */
         .sandbox-root {
             position: relative;
             display: block;
@@ -52,10 +52,17 @@
             text-align: left;
             line-height: normal;
             font-family: sans-serif;
-            color: initial;
+            
+            /* V92 关键修复：不再强制颜色，允许继承或覆盖 */
+            color: inherit; 
+            background: transparent; 
+            
             border-radius: 8px;
-            overflow: hidden;
-            transition: opacity 0.3s ease; /* 简化动画以提升性能 */
+            overflow: hidden; /* 防止内容溢出污染布局 */
+            transition: opacity 0.3s ease;
+            
+            /* 性能优化：创建新的层叠上下文 */
+            isolation: isolate; 
         }
         .sandbox-root img { max-width: 100%; height: auto; }
 
@@ -66,7 +73,6 @@
             border-radius: 8px;
             margin-bottom: 10px;
             overflow: hidden;
-            /* 移除复杂的 transition 以提升长列表性能 */
         }
         .preset-card-header {
             padding: 12px;
@@ -591,7 +597,7 @@
                     </div>
                 </div>
 
-                <!-- [V91] 强制注入防崩坏 & 其他补充 -->
+                <!-- [V89] 其他补充模块 (文件列表模式) -->
                 <div class="space-y-2">
                     <label class="text-xs font-bold text-[#7a85b8] uppercase tracking-wider">其他补充 (OTHERS)</label>
                     <div id="jailbreak-file-list" class="file-list-container"></div>
@@ -940,7 +946,7 @@
             dataLoaded: false,
             phoneOpen: false,
             globalPresets: [],
-            expandedPresetIndices: new Set(), // [V89] State Memory
+            expandedPresetIndices: new Set(), // [V92] State Memory
 
             async init() {
                 // ... (Init code same as V85)
@@ -998,7 +1004,7 @@
             async saveToLocal() { if(!this.dataLoaded) return; await AssetDB.save('roleplay_saves_v50', this.data); },
             async manualSave() { await this.saveToLocal(); this.showToast("已保存"); },
 
-            // [V89] Jailbreak Logic - File List Mode
+            // [V92] Jailbreak Logic - File List Mode
             handleJailbreakUpload(input) {
                 const files = Array.from(input.files);
                 if (!files.length) return;
@@ -1182,7 +1188,7 @@
                 this.renderPresetList();
             },
 
-            // [V89] Render Script Config (With State Memory)
+            // [V92] Render Script Config (With State Memory)
             renderScriptPresetConfig() {
                 const container = document.getElementById('script-preset-config-area');
                 container.innerHTML = '';
@@ -1224,7 +1230,7 @@
                     const body = document.createElement('div');
                     body.className = "preset-body";
                     
-                    // [V89] Restore expanded state
+                    // [V92] Restore expanded state
                     if (this.expandedPresetIndices.has(pIdx)) {
                         body.classList.add('expanded');
                     }
@@ -1261,7 +1267,7 @@
                         body.appendChild(item);
                     });
 
-                    // [V89] Toggle logic with state saving
+                    // [V92] Toggle logic with state saving
                     header.onclick = () => {
                         if (body.classList.contains('expanded')) {
                             body.classList.remove('expanded');
@@ -1971,4 +1977,4 @@ this.renderSaveList(); this.showToast("時間線已抹除"); },
         window.onload = () => App.init();
     </script>
 </body>
-</html
+</html>
